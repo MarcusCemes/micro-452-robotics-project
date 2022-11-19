@@ -1,0 +1,35 @@
+from dataclasses import asdict, dataclass
+
+Vec2 = tuple[float, float]
+
+BOARD_SIZE_M = 2.0
+
+
+@dataclass
+class State:
+    position: Vec2
+    start: Vec2
+    end: Vec2
+    physical_size: Vec2
+    path: list[Vec2] | None
+    obstacles: list[tuple[Vec2, Vec2]]
+    computation_time: float
+
+    def json(self):
+        return asdict(self)
+
+
+state = State(
+    position=(0.5, 1.4),
+    start=(0.4, 0.4),
+    end=(1.6, 1.6),
+    physical_size=(BOARD_SIZE_M, BOARD_SIZE_M),
+    path=[],
+    obstacles=[],
+    computation_time=0.0
+)
+
+
+def update_state(state: dict[str, object]):
+    for k, v in state.items():
+        state[k] = v

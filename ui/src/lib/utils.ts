@@ -1,3 +1,5 @@
+import type { App } from "./stores";
+
 export class Vec2 {
     constructor(public x: number, public y: number) {}
 
@@ -5,12 +7,42 @@ export class Vec2 {
         return new Vec2(this.x + rhs.x, this.y + rhs.y);
     }
 
+    multiply(scalar: number): Vec2 {
+        return new Vec2(this.x * scalar, this.y * scalar);
+    }
+
+    multiplyBy(rhs: Vec2): Vec2 {
+        return new Vec2(this.x * rhs.x, this.y * rhs.y);
+    }
+
     divide(scalar: number): Vec2 {
         return new Vec2(this.x / scalar, this.y / scalar);
     }
 
+    divideBy(rhs: Vec2): Vec2 {
+        return new Vec2(this.x / rhs.x, this.y / rhs.y);
+    }
+
     eq(rhs: Vec2): boolean {
         return this.x === rhs.x && this.y === rhs.y;
+    }
+
+    sub(rhs: Vec2): Vec2 {
+        return new Vec2(this.x - rhs.x, this.y - rhs.y);
+    }
+
+    toScreenSpace(app: App): Vec2 {
+        const { mapSize, physicalSize } = app;
+        return this.divideBy(physicalSize).multiplyBy(mapSize);
+    }
+
+    toPhysicalSpace(app: App): Vec2 {
+        const { mapSize, physicalSize } = app;
+        return this.divideBy(mapSize).multiplyBy(physicalSize);
+    }
+
+    array(): [number, number] {
+        return [this.x, this.y];
     }
 
     static parse(coords?: unknown): Vec2 | undefined {
@@ -46,4 +78,8 @@ function expandObjects(x: ClassValue) {
 
 function isObject(x: unknown): x is { [index: string]: unknown } {
     return typeof x === "object" && x !== null;
+}
+
+export function px(x: number) {
+    return `${x}px`;
 }

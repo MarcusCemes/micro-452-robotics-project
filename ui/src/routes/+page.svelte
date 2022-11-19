@@ -3,6 +3,8 @@
     import Map from "$lib/Map.svelte";
 
     $: e = $events;
+
+    $: time = e.state.computationTime as number | undefined;
 </script>
 
 <div class="min-h-screen grid grid-cols-5">
@@ -16,6 +18,12 @@
                 </div>
             {/each}
         </div>
+
+        {#if time}
+            <div class="mt-2">
+                Computation time: {time} s
+            </div>
+        {/if}
     </div>
 
     <div class="col-span-3 flex justify-center items-center bg-gray-50">

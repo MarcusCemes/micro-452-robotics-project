@@ -1,5 +1,5 @@
 import asyncio
-from sys import exit
+import pathlib
 
 from aiofiles import open
 from rich.console import Console
@@ -7,7 +7,7 @@ from tdmclient import ClientAsync
 from tdmclient.atranspiler import ATranspiler
 
 from app.big_brain import start_thinking
-from app.server import start_server, stop_server
+from app.server import Server
 
 _console = Console()
 
@@ -22,9 +22,8 @@ def main():
         _console.print("[yellow]Interrupt")
 
     except Exception as e:
-        _console.print("[red]Core program error:[/red]")
-        _console.print(e)
-        exit(1)
+        _console.print("[red]Core program error[/red]")
+        raise e
 
 
 async def connect():
@@ -41,18 +40,16 @@ async def connect():
 
 
 async def run_program(node):
-    await start_server()
-
-    try:
+    async with Server():
         await load_native_code(node)
         await start_thinking()
 
-    finally:
-        await stop_server()
-
 
 async def load_native_code(node):
-    async with open("app/controller.py", mode="r") as f:
+    current_path = pathlib.Path(__file__).parent.resolve()
+    controller_path = current_path / "controller.py"
+
+    async with open(controller_path, mode="r") as f:
         aseba = ATranspiler.simple_transpile(await f.read())
         await node.compile(aseba)
         await node.run()
