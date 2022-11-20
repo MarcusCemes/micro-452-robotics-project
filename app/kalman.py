@@ -1,5 +1,3 @@
-from app.state import state, update_state
-
 Ts   = 0.1 # scan period
 
 qp   = 0 # variance on position state
@@ -15,7 +13,7 @@ stripe_width = 50
 Q = np.array([[qp, 0], [0, q_nu]]);
 speed_conv_factor = 0.3375;
 
-def kalman_filter_1D(speed, cam_prev, cam_state, pos_last_trans, x_est_prev, P_est_prev,
+def kalman_filter_1D(speed, cam_pos_prev, cam_pos, x_est_prev, P_est_prev,
                   HT=None, HNT=None, RT=None, RNT=None):
     """
     Estimates the current state using input sensor data and the previous state
