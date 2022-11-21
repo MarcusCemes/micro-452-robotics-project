@@ -43,7 +43,8 @@ def print_banner():
 
 
 async def connect():
-    status = console.status("Connecting to Thymio driver")
+    status = console.status(
+        "Connecting to Thymio driver", spinner_style="cyan")
     status.start()
 
     try:

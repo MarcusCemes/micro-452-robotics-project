@@ -1,32 +1,37 @@
 from rich.console import Console
 
 console = Console()
-level = 5
+level = 6
 
 
 def critical(msg: str) -> None:
     if level >= 1:
-        _log("[black on #e11d48] CRITICAL [/]", msg)
+        _log("[black on red] CRITICAL [/]", msg)
 
 
 def error(msg: str) -> None:
     if level >= 2:
-        _log("[black on #ef4444] ERROR    [/]", msg)
+        _log("[red] ERROR    [/]", msg)
 
 
 def warning(msg: str) -> None:
     if level >= 3:
-        _log("[black on #fbbf24] WARNING  [/]", msg)
+        _log("[black on yellow] WARNING  [/]", msg)
 
 
 def info(msg: str) -> None:
     if level >= 4:
-        _log("[black on #22c55e] INFO     [/]", msg)
+        _log("[green] INFO     [/]", msg)
+
+
+def verbose(msg: str) -> None:
+    if level >= 5:
+        _log("[blue] VERBOSE  [/]", msg)
 
 
 def debug(msg: str) -> None:
-    if level >= 5:
-        _log("[black on #d946ef] DEBUG    [/]", msg)
+    if level >= 6:
+        _log("[purple] DEBUG    [/]", msg)
 
 
 def _log(prefix: str, msg: str) -> None:
