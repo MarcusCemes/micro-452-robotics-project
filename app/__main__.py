@@ -2,6 +2,8 @@ import asyncio
 import pathlib
 
 from aiofiles import open
+from rich.padding import Padding
+from rich.panel import Panel
 from tdmclient import ClientAsync
 from tdmclient.atranspiler import ATranspiler
 
@@ -12,6 +14,8 @@ from app.server import Server
 
 
 def main():
+    print_banner()
+
     try:
         asyncio.run(connect())
 
@@ -21,6 +25,21 @@ def main():
     except Exception:
         critical("Program crashed")
         console.print_exception()
+
+    finally:
+        print("")
+
+
+def print_banner():
+    console.print(
+        Padding(
+            Panel(
+                "[bold white]Big Brain - Thymio Controller\n"
+                + "[grey42]MICRO-452 - Mobile Robotics\n"
+                + "École Polytechnique Fédérale de Lausanne"
+            ),
+            (1, 2),
+        ), justify="left")
 
 
 async def connect():
@@ -45,6 +64,9 @@ async def connect():
 
     except ConnectionResetError:
         warning("Thymio driver connection closed")
+
+    finally:
+        status.stop()
 
 
 async def run_program(node):
