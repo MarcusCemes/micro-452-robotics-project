@@ -1,3 +1,4 @@
+from asyncio import Event
 from dataclasses import asdict, dataclass
 
 Vec2 = tuple[float, float]
@@ -7,6 +8,8 @@ BOARD_SIZE_M = 2.0
 
 @dataclass
 class State:
+    _stale = Event()
+
     position: Vec2
     start: Vec2
     end: Vec2
@@ -18,6 +21,13 @@ class State:
     def json(self):
         return asdict(self)
 
+    def mark_stale(self):
+        self._stale.set()
+
+    async def wait_for_stale(self):
+        await self._stale.wait()
+        self._stale.clear()
+
 
 state = State(
     position=(0.5, 1.4),
@@ -28,8 +38,3 @@ state = State(
     obstacles=[],
     computation_time=0.0
 )
-
-
-def update_state(state: dict[str, object]):
-    for k, v in state.items():
-        state[k] = v

@@ -1,6 +1,7 @@
 from dataclasses import dataclass
 from time import perf_counter
 from typing import Generator
+from app.parallel import Pool
 
 from app.state import State, state
 
@@ -10,8 +11,15 @@ IntVec2 = tuple[int, int]
 FloatVec2 = tuple[float, float]
 
 
-def recalculate_path():
-    algo = Djikstra(state)
+async def recompute_path():
+    (path, time) = await Pool().run(find_optimal_path, state)
+    state.path = path
+    state.computation_time = time
+    state.mark_stale()
+
+
+def find_optimal_path(state: State) -> tuple[list[FloatVec2] | None, float]:
+    algo = Dijkstra(state)
 
     start_time = perf_counter()
     path = algo.calculate()
@@ -28,7 +36,7 @@ class Node:
     visited: bool = False
 
 
-class Djikstra:
+class Dijkstra:
     def __init__(
         self,
         state: State,
