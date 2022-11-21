@@ -1,11 +1,3 @@
-Ts   = 0.1 # scan period
-
-qp   = 0 # variance on position state
-q_nu = 0 # variance on speed state
-
-rp   = 0 # variance on position measurement 
-r_nu = 0 # variance on speed measurement 
-
 # Initialising the remaining constants
 # units: length [mm], time [s]
 A = np.array([[1, Ts], [0, 1]])
