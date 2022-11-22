@@ -1,4 +1,4 @@
-import { derived, readable } from "svelte/store";
+import { derived, writable, type Readable, type Writable } from "svelte/store";
 
 let ws: WebSocket | null = null;
 
@@ -7,50 +7,128 @@ const SERVER_URL = "ws://localhost:8080/ws";
 
 const tx = new EventTarget();
 
-const socket = readable<WebSocket | null>(null, (set) => {
-    ws = new WebSocket(SERVER_URL);
+const connection = writable<number | false>(false);
 
-    const handler = (e: Event) => {
-        if (e instanceof CustomEvent) ws?.send(JSON.stringify(e.detail));
-    };
+export function connect() {
+    connection.update((x) => x || 1);
+}
 
-    ws.onopen = () => {
-        tx.addEventListener("message", handler);
+export function reconnect() {
+    connection.update((x) => (x ? x + 1 : 1));
+}
+
+export function disconnect() {
+    connection.set(false);
+}
+
+const socket = derived<Writable<number | boolean>, WebSocket | null>(
+    connection,
+    ($id, set) => {
+        if (!$id) {
+            set(null);
+            return;
+        }
+
+        const ws = new WebSocket(SERVER_URL);
+
+        const txHandler = (e: Event) => {
+            if (e instanceof CustomEvent && ws?.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify(e.detail));
+            }
+        };
+
+        ws.addEventListener("open", () => {
+            tx.addEventListener("message", txHandler);
+        });
+
         set(ws);
-    };
 
-    return () => {
-        tx.removeEventListener("message", handler);
-        if (ws) ws.close();
-    };
-});
+        return () => {
+            tx.removeEventListener("message", txHandler);
+            ws?.close();
+        };
+    },
+    null
+);
 
-export const events = derived(
+export const connected = derived(
+    socket,
+    ($socket, set) => {
+        if (!$socket) return set(false);
+
+        const openHandler = () => set(true);
+        const closeHandler = () => set(false);
+
+        if ($socket.readyState === WebSocket.OPEN) {
+            set(true);
+        } else {
+            $socket.addEventListener("open", openHandler);
+        }
+
+        $socket.addEventListener("close", closeHandler);
+
+        return () => {
+            $socket.removeEventListener("open", openHandler);
+            $socket.removeEventListener("close", closeHandler);
+        };
+    },
+    false
+);
+
+export const events = derived<
+    Readable<WebSocket | null>,
+    { type: string; data: unknown } | null
+>(
+    socket,
+    (ws, set) => {
+        if (!ws) return;
+
+        const handler = (e: MessageEvent) => {
+            const payload = JSON.parse(e.data);
+            set(payload);
+        };
+
+        ws.addEventListener("message", handler);
+
+        return () => {
+            ws.removeEventListener("message", handler);
+        };
+    },
+    null
+);
+
+export const state = derived(
     socket,
     (ws, set) => {
         if (!ws) return;
 
         let msgs: unknown[] = [];
-        let state = {};
+        let state: Record<string, unknown> = {};
 
-        ws.onmessage = (e) => {
-            const msg = JSON.parse(e.data);
+        const handler = (e: MessageEvent) => {
+            const { type, data } = JSON.parse(e.data);
 
-            switch (msg.type) {
+            switch (type) {
                 case "msg":
-                    msgs = [msg.data, ...msgs].slice(0, HISTORY);
+                    msgs = [data, ...msgs].slice(0, HISTORY);
                     break;
 
                 case "state":
-                    state = msg.data;
+                    state = data as Record<string, unknown>;
                     break;
 
                 case "patch":
-                    state = { ...state, ...msg.data };
+                    state = { ...state, ...(data as Record<string, unknown>) };
                     break;
             }
 
             set({ msgs, state });
+        };
+
+        ws.addEventListener("message", handler);
+
+        return () => {
+            ws.removeEventListener("message", handler);
         };
     },
     { msgs: [], state: {} } as {
