@@ -1,4 +1,4 @@
-from asyncio import create_task, gather
+from asyncio import create_task
 from typing import Any
 from aiohttp import WSMsgType, web
 from app.global_navigation import recompute_path

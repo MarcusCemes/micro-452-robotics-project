@@ -1,11 +1,9 @@
 import asyncio
-import pathlib
 
 from aiofiles import open
 from rich.padding import Padding
 from rich.panel import Panel
 from tdmclient import ClientAsync
-from tdmclient.atranspiler import ATranspiler
 
 from app.big_brain import start_thinking
 from app.console import *
@@ -58,7 +56,8 @@ async def connect():
                     info("Connected")
                     debug(f"Node lock on {node}")
 
-                    await run_program(node)
+                    async with Server():
+                        await start_thinking(node)
 
     except ConnectionRefusedError:
         warning("Thymio driver connection refused")
@@ -68,25 +67,6 @@ async def connect():
 
     finally:
         status.stop()
-
-
-async def run_program(node):
-    async with Server():
-        await load_native_code(node)
-        await start_thinking()
-
-
-async def load_native_code(node):
-    current_path = pathlib.Path(__file__).parent.resolve()
-    controller_path = current_path / "controller.py"
-
-    async with open(controller_path, mode="r") as f:
-        aseba = ATranspiler.simple_transpile(await f.read())
-
-        await node.compile(aseba)
-        await node.run()
-
-        debug("Native ASEBA code loaded")
 
 
 if __name__ == "__main__":
