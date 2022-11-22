@@ -1,11 +1,10 @@
 # Initialising the remaining constants
 # units: length [mm], time [s]
 A = np.array([[1, Ts], [0, 1]])
-stripe_width = 50
 Q = np.array([[qp, 0], [0, q_nu]]);
 speed_conv_factor = 0.3375;
 
-def kalman_filter_1D(speed, cam_pos_prev, cam_pos, x_est_prev, P_est_prev,
+def kalman_filter_1D(speed, cam_pos_prev, cam_pos, x_est_prev, P_est_prev, orientation,
                   HT=None, HNT=None, RT=None, RNT=None):
     """
     Estimates the current state using input sensor data and the previous state
@@ -15,6 +14,7 @@ def kalman_filter_1D(speed, cam_pos_prev, cam_pos, x_est_prev, P_est_prev,
     param cam_pos: pos measured by camera
     param x_est_prev: previous state a posteriori estimation
     param P_est_prev: previous state a posteriori covariance
+    param orientation: actual orientation of the robot
     
     return x_est: new a posteriori state estimation
     return P_est: new a posteriori state covariance
@@ -48,7 +48,6 @@ def kalman_filter_1D(speed, cam_pos_prev, cam_pos, x_est_prev, P_est_prev,
              
     # Kalman gain (tells how much the predictions should be corrected based on the measurements)
     K = np.dot(P_est_a_priori, np.dot(H.T, np.linalg.inv(S)));
-    
     
     # a posteriori estimate
     x_est = x_est_a_priori + np.dot(K,i);

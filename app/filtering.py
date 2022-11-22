@@ -4,105 +4,100 @@ from app.kalman import kalman_filter_1D
 
 # idea: have a thymio_data_speed array to store the speed of the motors since the beggining
 thymio_data_speed = []
-states_data = []
+states_data = [] # containing states (x pos, y pos, orientation)
 Ts = 0.1 # scan period
 
+last_cam_state = State(
+    position=(0.5, 1.4),
+    orientation=(math.pi/2),
+    start=(0.4, 0.4),
+    end=(1.6, 1.6),
+    physical_size=(BOARD_SIZE_M, BOARD_SIZE_M),
+    path=[],
+    obstacles=[],
+    computation_time=0.0
+) #INITIAL STATE FOR DECLARATION
 
-""" def motors(left, right):
-    return {
-        "motor.left.target": [left],
-        "motor.right.target": [right],
-    }
+x_est = 0 # initial x position
+Px_est = [10 * np.ones(2)] #estimation de a quel point la caméra a raison
 
-def get_data():
-    thymio_data_speed.append({"left_speed":node["motor.left.speed"],
-                        "right_speed":node["motor.right.speed"]})
-     """
+y_est = 0 # initial y position
+Py_est = [10 * np.ones(2)]
+
+# to compute beforehand
+q_nu = std_speed/2 # variance on speed state
+r_nu = std_speed/2 # variance on speed measurement 
+
+qp = 0.04 # variance on position state
+rp = 0.25 # variance on position measurement 
+
 
 def get_speed_x_y(orientation, speed_left, speed_right):
     """ decomposes the speed in the axis base
     
-        param orientation: orientation of the thymio in [rad] (0 is facing north)
+        param orientation: orientation of the thymio in [rad] (0 is facing east)
         param speed_left: speed given by the left motor in thymio units
         param speed_right: speed given by the right motor in thymio units
         
-        return speed_left_x: left speed along the x axis
-        return speed_left_y: left speed along the y axis
-        return speed_right_x: right speed along the x axis
-        return speed_right_y: right speed along the y axis
+        return speed_x: forward speed along the x axis
+        return speed_y: forward speed along the y axis
     """
     sinor = math.sin(orientation)
     cosor = math.cos(orientation)
 
-    speed_left_x = sinor*speed_left
-    speed_right_x = sinor*speed_right
+    forward_speed = (speed_left + speed_right) / 2
 
-    speed_left_y = cosor*speed_left
-    speed_right_y = cosor*speed_right
+    speed_x = cosor * forward_speed
 
-    return speed_left_x, speed_left_y, speed_right_x, speed_right_y
+    speed_y = sinor * forward_speed
 
+    return speed_x, speed_y
 
 
 def filtering(current_state, speed_left, speed_right):
 
     """    Runs the filtering pipeline once, must be called each time a state is measured
         
-        param state: current state the thymio is in from vision
+        param current_state: current state the thymio is in from vision
             containing: x position [cm], y position [cm], orientation [rad]
-        param speed_left: speed given by the left motor in thymio units
-        param speed_right: speed given by the right motor in thymio units
+        param speed_left: speed given by the left motor in cm/s units
+        param speed_right: speed given by the right motor in cm/s thymio units
         
         return state_est: estimmation of the state
     """   
 
-    # add something to fill the thymio_data_speed array
+    # update orientation
+    rotation_speed = (speed_left - speed_right) /2 /30 /5
+    diffOr = rotation_speed * Ts
+    orientation_new = orientation + diffOr
+    if (orientation_new > 2*math.pi):
+        orientation_new = orientation_new - 2*math.pi
 
-    states_data.append = current_state # data containing states since the beggining
-    thymio_data_speed.append({"left_speed":node["motor.left.speed"],
-                            "right_speed":node["motor.right.speed"]})
+    # local variables
+    speed_x, speed_y = get_speed_x_y(orientation_new, speed_left, speed_right)
 
-    l_speed = [x["left_speed"] for x in thymio_data_speed]
-    r_speed = [x["right_speed"] for x in thymio_data_speed]
+    (cam_previous_pos_x, cam_previous_pos_y) = last_cam_state.position
+    (cam_pos_x, cam_pos_y) = current_state.position
 
-    avg_speed = [(x["left_speed"]+x["right_speed"])/2 for x in thymio_data_speed] # MAYBE DIFFERENTIATE DIRECTIONS OF VELOCITY
+    # Filtering
+    new_x_est, new_Px_est = kalman_filter_1D(speed_x, cam_previous_pos_x, cam_pos_x, x_est, Px_est, orientation_new)
+    x_est = new_x_est # x estimmation
+    Px_est = new_Px_est
 
-    thymio_speed_to_mms = 2.5 # 500 thymio speed = 200 mm/s
+    new_y_est, new_Py_est = kalman_filter_1D(speed_y, cam_previous_pos_y, cam_pos_y, y_est, Py_est, orientation_new)
+    y_est = new_y_est # y estimmation
+    Py_est = new_Py_est
 
-    var_speed = np.var(avg_speed[:]/thymio_speed_to_mms)
-    std_speed = np.std(avg_speed[:]/thymio_speed_to_mms)
+    last_cam_state.update_state_position(current_state.position) #TO IMPLEMENT IN STATE
+    
+    #create output state
+    state_est = State()
+    state_est.position = (x_est, y_est)
+    state_est.orientation = orientation_new
 
-    q_nu = std_speed/2 # variance on speed state
-    r_nu = std_speed/2 # variance on speed measurement 
+    #update global state
+    state.position = (x_est, y_est)
+    state.orientation = orientation_new
+    state.mark_stale()
 
-    qp = 0.04 # variance on position state
-    rp = 0.25 # variance on position measurement 
-
-    x_est = [np.array([[0], [0]])] # POSITION, VELOCITY in x direction
-    Px_est = [1000 * np.ones(2)]
-    cam_pos_x = [avg_cam_pos_x[k0-1]]
-    speed_x = [avg_speed_x[k0-1]]
-
-    y_est = [np.array([[0], [0]])] # POSITION, VELOCITY in y direction
-    Py_est = [1000 * np.ones(2)]
-    cam_pos_y = [avg_cam_pos_y[k0-1]]
-    speed_y = [avg_speed_y[k0-1]]
-
-    k0 = 0 #initial offset (not sure if usefull for the project)
-
-    for k in tqdm(range(k0, len(states_data))):
-        speed_x.append(avg_speed_x[k])
-        cam_pos_x.append(avg_cam_pos_x[k])
-
-        speed_y.append(avg_speed_y[k])
-        cam_pos_y.append(avg_cam_pos_y[k])
-
-        new_x_est, new_Px_est = kalman_filter(speed_x[-1], cam_pos_x[-2], cam_pos_x[-1], x_est[-1], P_est[-1])
-        x_est.append(new_x_est) # x estimmation
-        Px_est.append(new_Px_est)
-
-        new_y_est, new_Py_est = kalman_filter(speed_y[-1], cam_pos_y[-2], cam_pos_y[-1], x_est[-1], P_est[-1])
-        y_est.append(new_y_est) # y estimmation
-        Py_est.append(new_Py_est)
-        
-    return new_x_est, new_y_est
+    return state_est
