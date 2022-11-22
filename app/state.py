@@ -4,13 +4,14 @@ from dataclasses import asdict, dataclass
 Vec2 = tuple[float, float]
 
 BOARD_SIZE_M = 2.0
-
+NORTH = 1.57
 
 @dataclass
 class State:
     _stale = Event()
 
     position: Vec2
+    orientation: float
     start: Vec2
     end: Vec2
     physical_size: Vec2
@@ -31,6 +32,7 @@ class State:
 
 state = State(
     position=(0.5, 1.4),
+    orientation=(NORTH),
     start=(0.4, 0.4),
     end=(1.6, 1.6),
     physical_size=(BOARD_SIZE_M, BOARD_SIZE_M),
