@@ -1,4 +1,4 @@
-from asyncio import gather
+from asyncio import create_task
 from typing import Any
 from aiohttp import WSMsgType, web
 from app.global_navigation import recompute_path
@@ -34,12 +34,18 @@ async def websocket_handler(request):
 
     debug("[server] Client connected")
 
-    await ws.send_json({"type": "msg", "data": "Hi!"})
-    await ws.send_json({"type": "state", "data": state.json()})
+    try:
+        await ws.send_json({"type": "msg", "data": "Hi!"})
+        await ws.send_json({"type": "state", "data": state.json()})
 
-    await gather(handle_tx(ws), handle_rx(ws))
+        tx = create_task(handle_tx(ws))
+        await handle_rx(ws)
 
-    debug("[server] Client connected")
+        tx.cancel()
+        debug("[server] Client disconnected")
+
+    except ConnectionResetError:
+        pass
 
     return ws
 
@@ -53,23 +59,26 @@ async def handle_tx(ws: web.WebSocketResponse):
 async def handle_rx(ws: web.WebSocketResponse):
     async for msg in ws:
         if msg.type == WSMsgType.TEXT:
-            await handle_message(msg.json())
+            create_task(handle_message(msg.json(), ws))
 
 
-async def handle_message(msg: Any):
-
+async def handle_message(msg: Any, ws: web.WebSocketResponse):
     match msg["type"]:
+        case "ping":
+            id = msg["data"]
+            await ws.send_json({"type": "pong", "data": id})
+
         case "set_start":
             state.start = msg["data"]
-            await recompute_path()
 
         case "set_end":
             state.end = msg["data"]
-            await recompute_path()
 
         case "add_obstacle":
             state.obstacles.append(msg["data"])
-            await recompute_path()
+
+    state.mark_stale()
+    await recompute_path()
 
 
 def create_app():

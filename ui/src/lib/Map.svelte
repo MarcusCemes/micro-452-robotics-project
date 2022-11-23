@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { events, send } from "./connection";
+    import { state, send } from "./connection";
     import Dot from "./Dot.svelte";
     import Obstacle from "./Obstacle.svelte";
     import { app } from "./stores";
@@ -9,7 +9,7 @@
 
     let mouseDownStart = new Vec2(0, 0);
 
-    $: e = $events;
+    $: e = $state;
 
     $: physicalSize = e.state.size as number | undefined;
     $: updatePhysicalSize(physicalSize);
@@ -19,7 +19,13 @@
     $: pos = Vec2.parse(e.state.pos);
 
     $: path = e.state.path as [number, number][] | undefined;
-    $: pathDots = path?.map(Vec2.parse) ?? [];
+    $: pathPoints = path
+        ?.map((r) => {
+            const v = Vec2.parse(r)?.toScreenSpace($app);
+            return v && `${v.x} ${v.y}`;
+        })
+        .filter((x) => !!x)
+        .join(",");
 
     $: obstacles = e.state.obstacles as
         | [[number, number], [number, number]][]
@@ -88,11 +94,24 @@
         {/if}
     {/each}
 
-    {#each pathDots as r}
-        {#if r}
-            <Dot class="bg-yellow-500 scale-50" {r} />
-        {/if}
-    {/each}
+    {#if pathPoints}
+        <svg
+            viewBox={`0 0 ${$app.mapSize.x} ${$app.mapSize.y}`}
+            width={$app.mapSize.x}
+            height={$app.mapSize.y}
+            xmlns="http://www.w3.org/2000/svg"
+            class="text-teal-500"
+        >
+            <polyline
+                points={pathPoints}
+                stroke="currentColor"
+                fill="none"
+                stroke-width="0.2em"
+                stroke-linejoin="miter"
+            />
+        </svg>
+    {/if}
+
 
     {#if start}
         <Dot class="bg-green-500" r={start} />
