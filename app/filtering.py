@@ -1,6 +1,7 @@
 from app.state import state, update_state
 from app.kalman import kalman_filter_1D
 
+""" OBSELETE """
 
 # idea: have a thymio_data_speed array to store the speed of the motors since the beggining
 thymio_data_speed = []

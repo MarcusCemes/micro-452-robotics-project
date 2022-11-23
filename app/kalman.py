@@ -1,3 +1,5 @@
+""" OBSELETE """
+
 # Initialising the remaining constants
 # units: length [mm], time [s]
 A = np.array([[1, Ts], [0, 1]])
