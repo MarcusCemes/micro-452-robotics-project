@@ -1,14 +1,20 @@
 from dataclasses import dataclass
 from time import perf_counter
 from typing import Generator
+
 from app.parallel import Pool
-
+from app.config import SUBDIVISIONS
 from app.state import State, state
+from app.types import Vec2
 
-SUBDIVISIONS = 64
 
 IntVec2 = tuple[int, int]
-FloatVec2 = tuple[float, float]
+
+
+class GlobalNavigation:
+
+    def update_obstacles(self, obstacles) -> None:
+        raise Exception("Not implemented!")
 
 
 async def recompute_path():
@@ -18,7 +24,7 @@ async def recompute_path():
     state.mark_stale()
 
 
-def find_optimal_path(state: State) -> tuple[list[FloatVec2] | None, float]:
+def find_optimal_path(state: State) -> tuple[list[Vec2] | None, float]:
     algo = Dijkstra(state)
 
     start_time = perf_counter()
@@ -52,7 +58,7 @@ class Dijkstra:
 
         self.apply_obstacles(state.obstacles)
 
-    def apply_obstacles(self, obstacles: list[tuple[FloatVec2, FloatVec2]]):
+    def apply_obstacles(self, obstacles: list[tuple[Vec2, Vec2]]):
         for (start, end) in obstacles:
             start = self.graph.get_index(start)
             end = self.graph.get_index(end)
@@ -61,7 +67,7 @@ class Dijkstra:
                 for y in range(start[1], end[1] + 1):
                     self.graph.node((x, y)).visitable = False
 
-    def calculate(self) -> list[FloatVec2] | None:
+    def calculate(self) -> list[Vec2] | None:
 
         if self.path:
             return self.path
@@ -101,7 +107,7 @@ class Dijkstra:
 
         return None
 
-    def calculate_path(self) -> list[FloatVec2]:
+    def calculate_path(self) -> list[Vec2]:
         path = []
         cursor = self.end
 
@@ -114,7 +120,7 @@ class Dijkstra:
 
 
 class Graph:
-    def __init__(self, subdivisions: int, size: FloatVec2):
+    def __init__(self, subdivisions: int, size: Vec2):
         self.size = size
         self.subdivisions = subdivisions
         self.nodes = [[Node() for _ in range(SUBDIVISIONS)]
@@ -124,13 +130,13 @@ class Graph:
         (x, y) = coords
         return self.nodes[x][y]
 
-    def get_index(self, coords: FloatVec2) -> IntVec2:
+    def get_index(self, coords: Vec2) -> IntVec2:
         (x, y) = coords
         x = round(x * float(self.subdivisions) / self.size[0])
         y = round(y * float(self.subdivisions) / self.size[1])
         return (x, y)
 
-    def get_coords(self, index: IntVec2) -> FloatVec2:
+    def get_coords(self, index: IntVec2) -> Vec2:
         (x, y) = index
         x *= self.size[0] / float(self.subdivisions)
         y *= self.size[1] / float(self.subdivisions)

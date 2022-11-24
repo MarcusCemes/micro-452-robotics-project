@@ -1,10 +1,11 @@
 from asyncio import Event
 from dataclasses import asdict, dataclass
 
-Vec2 = tuple[float, float]
+from app.types import Vec2
 
 BOARD_SIZE_M = 2.0
 NORTH = 1.57
+
 
 @dataclass
 class State:
