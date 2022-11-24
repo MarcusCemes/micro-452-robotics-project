@@ -1,21 +1,21 @@
-import asyncio
-
-from aiofiles import open
+from asyncio import run
 from rich.padding import Padding
 from rich.panel import Panel
 from tdmclient import ClientAsync
 
-from app.big_brain import start_thinking
+from app.big_brain import BigBrain
 from app.console import *
+from app.context import Context
 from app.parallel import Pool
 from app.server import Server
+from app.state import State
 
 
 def main():
     print_banner()
 
     try:
-        asyncio.run(connect())
+        run(connect())
 
     except KeyboardInterrupt:
         warning("Interrupted by user")
@@ -43,10 +43,11 @@ def print_banner():
 async def connect():
     status = console.status(
         "Connecting to Thymio driver", spinner_style="cyan")
+
     status.start()
 
     try:
-        with Pool() as client:
+        with Pool() as pool:
             with ClientAsync() as client:
                 status.update("Waiting for Thymio node")
 
@@ -56,8 +57,10 @@ async def connect():
                     info("Connected")
                     debug(f"Node lock on {node}")
 
-                    async with Server():
-                        await start_thinking(node)
+                    ctx = Context(node, pool, State())
+
+                    async with Server(ctx):
+                        await BigBrain(ctx).start_thinking()
 
     except ConnectionRefusedError:
         warning("Thymio driver connection refused")

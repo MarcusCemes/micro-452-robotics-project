@@ -9,17 +9,18 @@ P = ParamSpec("P")
 
 
 class Pool:
-    _executor = None
 
     def __enter__(self, size=POOL_SIZE):
-        assert Pool._executor is None
-        Pool._executor = ProcessPoolExecutor(size)
+        assert self.executor is None
+        self.executor = ProcessPoolExecutor(size)
+        return self
 
     def __exit__(self, *_):
-        assert Pool._executor is not None
-        Pool._executor.shutdown()
-        Pool._executor = None
+        assert self.executor is not None
+        self.executor.shutdown()
+        self.executor = None
 
     async def run(self, fn: Callable[P, T], *args: P.args, **kwargs: P.kwargs) -> T:
-        assert Pool._executor is not None
-        return await get_running_loop().run_in_executor(Pool._executor, fn, *args, **kwargs)
+        assert self.executor is not None
+        loop = get_running_loop()
+        return await loop.run_in_executor(self.executor, fn, *args, **kwargs)

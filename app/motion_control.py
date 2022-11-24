@@ -1,15 +1,14 @@
 
 from asyncio import create_task
-from tdmclient import ClientAsyncCacheNode
 
-from app.filtering import Filtering
+from app.context import Context
 from app.types import Vec2
 
 
 class MotionControl:
-    def __init__(self, node: ClientAsyncCacheNode, filtering: Filtering):
-        self.node = node
-        self.filtering = filtering
+
+    def __init__(self, ctx: Context):
+        self.ctx = ctx
         self.waypoint = None
 
     def __enter__(self):
@@ -21,7 +20,7 @@ class MotionControl:
 
     async def run(self):
         while True:
-            await self.filtering.wait_for_update()
+            await self.ctx.pose_update.wait()
             self.update_motor_control()
 
     def update_waypoint(self, waypoint: Vec2 | None):

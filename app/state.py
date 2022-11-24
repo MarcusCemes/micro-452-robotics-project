@@ -1,43 +1,42 @@
-from asyncio import Event
-from dataclasses import asdict, dataclass
+from dataclasses import dataclass
 
-from app.types import Vec2
-
-BOARD_SIZE_M = 2.0
-NORTH = 1.57
+from app.config import PHYSICAL_SIZE, SUBDIVISIONS
+from app.types import Coords, Signal, Vec2
 
 
 @dataclass
 class State:
-    _stale = Event()
+    """
+    The combined state of the application.
 
-    position: Vec2
-    orientation: float
-    start: Vec2
-    end: Vec2
-    physical_size: Vec2
-    path: list[Vec2] | None
-    obstacles: list[tuple[Vec2, Vec2]]
-    computation_time: float
+    The centralisation of all shared robot state allows it to be
+    accessed from anywhere in the application and easily serialised
+    and transmitted to clients that are connected via the web interface.
+    """
 
-    def json(self):
-        return asdict(self)
+    _dirty = Signal()
 
-    def mark_stale(self):
-        self._stale.set()
+    # == Filtering == #
+    position: Vec2 | None = None
+    orientation: float | None = None
 
-    async def wait_for_stale(self):
-        await self._stale.wait()
-        self._stale.clear()
+    # == Navigation == #
+    start: Vec2 | None = None
+    end: Vec2 | None = None
 
+    # == Global Navigation == #
+    path: list[Vec2] | None = None
+    obstacles: list[Coords] = []
+    computation_time: float | None = None
 
-state = State(
-    position=(0.5, 1.4),
-    orientation=(NORTH),
-    start=(0.4, 0.4),
-    end=(1.6, 1.6),
-    physical_size=(BOARD_SIZE_M, BOARD_SIZE_M),
-    path=[],
-    obstacles=[],
-    computation_time=0.0
-)
+    # == Vision == #
+    subdivision: int = SUBDIVISIONS
+    physical_size: Vec2 = PHYSICAL_SIZE
+
+    def changed(self):
+        """Wake up all tasks waiting for the state to be changed."""
+        self._dirty.trigger()
+
+    async def wait_changed(self):
+        """Wait for the state to be marked as changed."""
+        await self._dirty.wait()

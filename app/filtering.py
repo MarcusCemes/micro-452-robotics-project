@@ -1,11 +1,9 @@
 from asyncio import Event, create_task
 from time import time
-from tdmclient import ClientAsync, aw
 import math
 import numpy as np
-from tdmclient import ClientAsyncCacheNode
+from app.context import Context
 
-from app.state import state
 from app.EKF import ExtendedKalmanFilter
 
 THYMIO_TO_CM = 3.85/100  # NEEDS TO BE MODIFIED ACCORDING TO THE THYMIO
@@ -13,12 +11,13 @@ THYMIO_TO_CM = 3.85/100  # NEEDS TO BE MODIFIED ACCORDING TO THE THYMIO
 
 class Filtering:
 
-    def __init__(self, node: ClientAsyncCacheNode):
-        self.node = node
+    def __init__(self, ctx: Context):
+        self.ctx = ctx
+
         self.on_update = Event()
         self.last_update = time()
 
-        self.ekf = ExtendedKalmanFilter(0, 0, math.pi()/2)
+        self.ekf = ExtendedKalmanFilter(0,  math.pi/2)
 
     def __enter__(self):
         self.task = create_task(self.run())
@@ -29,14 +28,14 @@ class Filtering:
 
     async def run(self):
         while True:
-            await self.node.wait_for_variables({"motor.left.speed", "motor.right.speed"})
-            vl = self.node.v.motor.left.speed
-            vr = self.node.v.motor.right.speed
+            node = self.ctx.node
+
+            await node.wait_for_variables({"motor.left.speed", "motor.right.speed"})
+            vl = node.v.motor.left.speed
+            vr = node.v.motor.right.speed
 
             self.predict((vl, vr))
-
-            self.on_update.set()  # awaken the waiting state
-            self.on_update.clear()
+            self.ctx.pose_update.trigger()
 
     async def wait_for_update(self):
         await self.on_update.wait()
@@ -86,6 +85,6 @@ def filtering(current_state):  # current state is a class
     if (pose[0] != 0 and pose[1] != 0):  # verify condition (not sure)---------------------------------------------------------------------------------------------------------------
         # update
         # send global state
-    state.mark_stale()
+        state.changed()
 
     return state

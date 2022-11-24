@@ -1,8 +1,8 @@
 
 from asyncio import FIRST_COMPLETED, sleep, wait
-from tdmclient import ClientAsyncCacheNode
 
 from app.config import SUBDIVISIONS, SLEEP_INTERVAL
+from app.context import Context
 from app.filtering import Filtering
 from app.global_navigation import GlobalNavigation
 from app.local_navigation import LocalNavigation
@@ -12,22 +12,21 @@ from app.vision import Vision
 
 class BigBrain:
 
-    def __init__(self, node: ClientAsyncCacheNode, sleep_interval=SLEEP_INTERVAL):
-        self.node = node
+    def __init__(self, ctx: Context, sleep_interval=SLEEP_INTERVAL):
+        self.ctx = ctx
         self.sleep_interval = sleep_interval
 
     async def start_thinking(self):
-        vision = Vision()
-
-        with Filtering(self.node) as filtering:
-            with MotionControl(self.node, filtering) as motion_control:
-                await self.loop(
-                    vision,
-                    filtering,
-                    motion_control,
-                    GlobalNavigation(),
-                    LocalNavigation(),
-                )
+        with Filtering(self.ctx) as filtering:
+            with MotionControl(self.ctx) as motion_control:
+                with GlobalNavigation(self.ctx) as global_nav:
+                    await self.loop(
+                        Vision(),
+                        filtering,
+                        motion_control,
+                        global_nav,
+                        LocalNavigation(),
+                    )
 
     async def loop(
         self,
@@ -39,7 +38,10 @@ class BigBrain:
     ):
         while True:
             frame = vision.next_frame(SUBDIVISIONS)
-            global_nav.update_obstacles(frame.obstacles)
+
+            # TODO: Update state with obstac les
+            self.ctx.scene_update.trigger()
+
             filtering.update(frame.position, frame.orientation)
 
             await self.sleep_until_event(filtering)
@@ -48,7 +50,7 @@ class BigBrain:
                 await local_nav.freestyle(motion_control)
 
     async def sleep_until_event(self, filtering: Filtering):
-        """Return once something import happens, such as a proximity event."""
+        """Return once something important happens, such as a proximity event."""
 
         await wait([
             sleep(self.sleep_interval),
