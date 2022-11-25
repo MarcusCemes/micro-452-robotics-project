@@ -81,7 +81,7 @@ class ExtendedKalmanFilter(object):
         Updates B matrix
         """
         self.B = np.matrix([[np.cos(self.E[2])*dt, 0],
-                           [np.sin(self.E[2])*sdt, 0],
+                           [np.sin(self.E[2])*dt, 0],
                            [0, self.dt]])
 
     def update_U(self, speedL, speedR):

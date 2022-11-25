@@ -44,28 +44,33 @@ class Filtering:
         """This should return once the robot should enter freestyle."""
         raise Exception("Not implemented!")
 
-    def predict(self, velocity):
+    def predict(self, vl, vr):
 
         now = time()
         dt = now - self.last_update
 
-        (vl, vr) = velocity
-        self.ekf.predict_ekf(self, vl, vr, dt)
+        pose_x_est, pose_y_est, orientation_est = self.ekf.predict_ekf(self, vl, vr, dt)
+        self.ctx.state.position = (pose_x_est, pose_y_est)
+        self.ctx.state.orientation = orientation_est
+
 
         self.last_update = now
 
     def update(self, pose, orientation):  # from vision
-        pass
+        #filter recomputation and context update
+        pose_x_est, pose_y_est, orientation_est = self.ekf.update_ekf(pose, orientation)
+        self.ctx.state.position = (pose_x_est, pose_y_est)
+        self.ctx.state.orientation = orientation_est
 
 
-def filtering(current_state):  # current state is a class
-    """    Runs the filtering pipeline once, must be called each time a state is measured
+""" def filtering(current_state):  # current state is a class
+       Runs the filtering pipeline once, must be called each time a state is measured
 
         param current_state: current state the thymio is in from vision
             containing: x position [cm], y position [cm], orientation [rad] 
 
         return state: estimmation of the state (is there realy an use for that?)
-    """
+    
 
     speedL = node["motor.left.speed"]  # in thymio units
     speedR = node["motor.right.speed"]  # in thymio units
@@ -87,4 +92,4 @@ def filtering(current_state):  # current state is a class
         # send global state
         state.changed()
 
-    return state
+    return state """
