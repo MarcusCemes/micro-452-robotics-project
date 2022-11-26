@@ -1,35 +1,47 @@
-import { derived, writable, type Readable, type Writable } from "svelte/store";
-
-let ws: WebSocket | null = null;
+import {
+    derived,
+    get,
+    writable,
+    type Readable,
+    type Writable,
+} from "svelte/store";
 
 const HISTORY = 16;
 const SERVER_URL = "ws://localhost:8080/ws";
 
 const tx = new EventTarget();
 
-const connection = writable<number | false>(false);
+export const connectionSwitch = writable<number | false>(false);
+
+export enum ConnectionStatus {
+    Connecting,
+    Connected,
+    Disconnected,
+}
 
 export function connect() {
-    connection.update((x) => x || 1);
+    connectionSwitch.update((x) => x || 1);
 }
 
 export function reconnect() {
-    connection.update((x) => (x ? x + 1 : 1));
+    connectionSwitch.update((x) => (x ? x + 1 : 1));
 }
 
 export function disconnect() {
-    connection.set(false);
+    connectionSwitch.set(false);
 }
 
+export const socketUrl = writable(SERVER_URL);
+
 const socket = derived<Writable<number | boolean>, WebSocket | null>(
-    connection,
+    connectionSwitch,
     ($id, set) => {
         if (!$id) {
             set(null);
             return;
         }
 
-        const ws = new WebSocket(SERVER_URL);
+        const ws = new WebSocket(get(socketUrl));
 
         const txHandler = (e: Event) => {
             if (e instanceof CustomEvent && ws?.readyState === WebSocket.OPEN) {
@@ -51,28 +63,37 @@ const socket = derived<Writable<number | boolean>, WebSocket | null>(
     null
 );
 
-export const connected = derived(
+export const connectionStatus = derived(
     socket,
     ($socket, set) => {
-        if (!$socket) return set(false);
+        if (!$socket) return set(ConnectionStatus.Disconnected);
 
-        const openHandler = () => set(true);
-        const closeHandler = () => set(false);
+        const openHandler = () => set(ConnectionStatus.Connected);
+        const closeHandler = () => set(ConnectionStatus.Disconnected);
 
-        if ($socket.readyState === WebSocket.OPEN) {
-            set(true);
-        } else {
-            $socket.addEventListener("open", openHandler);
+        switch ($socket.readyState) {
+            case WebSocket.CONNECTING:
+                set(ConnectionStatus.Connecting);
+                $socket.addEventListener("open", openHandler);
+                $socket.addEventListener("close", closeHandler);
+                break;
+
+            case WebSocket.OPEN:
+                set(ConnectionStatus.Connected);
+                $socket.addEventListener("close", closeHandler);
+                break;
+
+            default:
+                set(ConnectionStatus.Disconnected);
+                break;
         }
-
-        $socket.addEventListener("close", closeHandler);
 
         return () => {
             $socket.removeEventListener("open", openHandler);
             $socket.removeEventListener("close", closeHandler);
         };
     },
-    false
+    ConnectionStatus.Disconnected
 );
 
 export const events = derived<

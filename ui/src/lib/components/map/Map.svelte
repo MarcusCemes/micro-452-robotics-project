@@ -1,9 +1,10 @@
 <script lang="ts">
-    import { state, send } from "./connection";
+    import { send, state } from "$lib/connection";
+    import { mapSize, scale } from "$lib/stores";
+    import { Vec2 } from "$lib/utils";
     import Dot from "./Dot.svelte";
     import Obstacle from "./Obstacle.svelte";
-    import { app } from "./stores";
-    import { Vec2 } from "./utils";
+    import Thymio from "./Thymio.svelte";
 
     let map: HTMLDivElement;
 
@@ -11,17 +12,17 @@
 
     $: e = $state;
 
-    $: physicalSize = e.state.size as number | undefined;
-    $: updatePhysicalSize(physicalSize);
-
     $: start = Vec2.parse(e.state.start);
     $: end = Vec2.parse(e.state.end);
-    $: pos = Vec2.parse(e.state.pos);
+
+    $: position = Vec2.parse(e.state.position);
+    $: orientation = e.state.orientation as number | undefined;
 
     $: path = e.state.path as [number, number][] | undefined;
+    $: console.log(path);
     $: pathPoints = path
         ?.map((r) => {
-            const v = Vec2.parse(r)?.toScreenSpace($app);
+            const v = Vec2.parse(r)?.toScreenSpace($scale);
             return v && `${v.x} ${v.y}`;
         })
         .filter((x) => !!x)
@@ -34,12 +35,8 @@
     $: obstacleVectors =
         obstacles?.map(([a, b]) => [Vec2.parse(a), Vec2.parse(b)]) ?? [];
 
-    function updatePhysicalSize(size: number | undefined) {
-        if (size) $app.physicalSize = new Vec2(size, size);
-    }
-
     function onClick(event: MouseEvent) {
-        const pos = getPosition(event).toPhysicalSpace($app).array();
+        const pos = getPosition(event).toPhysicalSpace($scale).array();
         send("set_start", pos);
     }
 
@@ -53,7 +50,9 @@
         const end = getPosition(event);
 
         const normalised = normaliseObstacle(mouseDownStart, end);
-        const obstacle = normalised.map((v) => v.toPhysicalSpace($app).array());
+        const obstacle = normalised.map((v) =>
+            v.toPhysicalSpace($scale).array()
+        );
 
         send("add_obstacle", obstacle);
     }
@@ -84,8 +83,8 @@
     on:mousedown={onMouseDown}
     on:mouseup={onMouseUp}
     on:contextmenu={onContextMenu}
-    bind:clientWidth={$app.mapSize.x}
-    bind:clientHeight={$app.mapSize.y}
+    bind:clientWidth={$mapSize.x}
+    bind:clientHeight={$mapSize.y}
     class="relative w-96 h-96 border border-gray-300 rounded bg-white"
 >
     {#each obstacleVectors as [from, to]}
@@ -96,9 +95,9 @@
 
     {#if pathPoints}
         <svg
-            viewBox={`0 0 ${$app.mapSize.x} ${$app.mapSize.y}`}
-            width={$app.mapSize.x}
-            height={$app.mapSize.y}
+            viewBox={`0 0 ${$mapSize.x} ${$mapSize.y}`}
+            width={$mapSize.x}
+            height={$mapSize.y}
             xmlns="http://www.w3.org/2000/svg"
             class="text-teal-500"
         >
@@ -112,7 +111,6 @@
         </svg>
     {/if}
 
-
     {#if start}
         <Dot class="bg-green-500" r={start} />
     {/if}
@@ -121,7 +119,7 @@
         <Dot class="bg-red-500" r={end} />
     {/if}
 
-    {#if pos}
-        <Dot class="bg-blue-400" ping r={pos} />
+    {#if position && orientation}
+        <Thymio {position} {orientation} />
     {/if}
 </div>
