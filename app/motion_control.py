@@ -2,21 +2,17 @@
 from asyncio import create_task
 
 from app.context import Context
-from app.types import Vec2
+from app.utils.background_task import BackgroundTask
+from app.utils.types import Vec2
 
 
-class MotionControl:
+class MotionControl(BackgroundTask):
 
     def __init__(self, ctx: Context):
+        super().__init__()
+
         self.ctx = ctx
         self.waypoint = None
-
-    def __enter__(self):
-        self.task = create_task(self.run())
-        return self
-
-    def __exit__(self, *_):
-        self.task.cancel()
 
     async def run(self):
         while True:

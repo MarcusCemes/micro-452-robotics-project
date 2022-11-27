@@ -4,12 +4,12 @@ from time import time
 
 import numpy as np
 
-from app.console import *
 from app.context import Context
 from app.EKF import ExtendedKalmanFilter
+from app.utils.console import *
 from app.utils.event_processor import ThymioEventProcessor
 
-THYMIO_TO_CM = 3.85/100  # NEEDS TO BE MODIFIED ACCORDING TO THE THYMIO
+THYMIO_TO_CM = 3.85e-2  # NEEDS TO BE MODIFIED ACCORDING TO THE THYMIO
 
 
 class Filtering(ThymioEventProcessor):
@@ -62,10 +62,10 @@ class Filtering(ThymioEventProcessor):
        Runs the filtering pipeline once, must be called each time a state is measured
 
         param current_state: current state the thymio is in from vision
-            containing: x position [cm], y position [cm], orientation [rad] 
+            containing: x position [cm], y position [cm], orientation [rad]
 
         return state: estimmation of the state (is there realy an use for that?)
-    
+
 
     speedL = node["motor.left.speed"]  # in thymio units
     speedR = node["motor.right.speed"]  # in thymio units

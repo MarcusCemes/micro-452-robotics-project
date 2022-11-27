@@ -5,7 +5,7 @@ from typing import Generator
 
 from app.config import SUBDIVISIONS
 from app.context import Context
-from app.types import Coords, Vec2
+from app.utils.types import Coords, Vec2
 
 
 @dataclass

@@ -1,9 +1,10 @@
-
 from dataclasses import dataclass
 from time import time
 from typing import Any
 
 import numpy as np
+
+from app.context import Context
 
 
 @dataclass
@@ -15,7 +16,8 @@ class Frame:
 
 class Vision():
 
-    def __init__(self):
+    def __init__(self, ctx: Context):
+        self.ctx = ctx
         self.last_update = time()
 
     def next_frame(self, subdivisions: int):

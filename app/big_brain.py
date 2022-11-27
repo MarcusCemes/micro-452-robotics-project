@@ -1,13 +1,13 @@
 
 from asyncio import FIRST_COMPLETED, Event, create_task, sleep, wait
 
-from app.config import SUBDIVISIONS, SLEEP_INTERVAL
-from app.console import *
+from app.config import SLEEP_INTERVAL, SUBDIVISIONS
 from app.context import Context
 from app.filtering import Filtering
 from app.global_navigation import GlobalNavigation
 from app.local_navigation import LocalNavigation
 from app.motion_control import MotionControl
+from app.utils.console import *
 from app.vision import Vision
 
 
@@ -21,25 +21,30 @@ class BigBrain:
 
         create_task(self.do_start_stop())
 
-        with Filtering(self.ctx) as filtering:
-            with MotionControl(self.ctx) as motion_control:
-                with GlobalNavigation(self.ctx) as global_nav:
-                    await self.loop(
-                        Vision(),
-                        filtering,
-                        motion_control,
-                        global_nav,
-                        LocalNavigation(),
-                    )
+        with Filtering(self.ctx) as filtering, \
+                MotionControl(self.ctx) as motion_control, \
+                GlobalNavigation(self.ctx) as global_nav:
+
+            await self.loop(
+                Vision(self.ctx),
+                filtering,
+                motion_control,
+                global_nav,
+                LocalNavigation(self.ctx),
+            )
 
     async def do_start_stop(self):
-        while True:
-            await sleep(2)
-            await self.ctx.node.set_variables(
-                {"motor.left.target": [0], "motor.right.target": [0]})
-            await sleep(2)
-            await self.ctx.node.set_variables(
-                {"motor.left.target": [100], "motor.right.target": [100]})
+        try:
+            while True:
+                await sleep(2)
+                await self.ctx.node.set_variables(
+                    {"motor.left.target": [0], "motor.right.target": [0]})
+                await sleep(2)
+                await self.ctx.node.set_variables(
+                    {"motor.left.target": [100], "motor.right.target": [100]})
+
+        except Exception:
+            pass
 
     async def loop(
         self,

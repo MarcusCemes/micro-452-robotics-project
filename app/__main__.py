@@ -1,14 +1,15 @@
 from asyncio import create_task, run, sleep
+
 from rich.padding import Padding
 from rich.panel import Panel
 from tdmclient import ClientAsync
 
 from app.big_brain import BigBrain
-from app.console import *
 from app.context import Context
 from app.parallel import Pool
 from app.server import Server
 from app.state import State
+from app.utils.console import *
 
 
 def main():
@@ -53,6 +54,7 @@ async def connect():
 
                 with await client.lock() as node:
                     status.stop()
+                    status = None
 
                     info("Connected")
                     debug(f"Node lock on {node}")
@@ -75,7 +77,8 @@ async def connect():
         warning("Thymio driver connection closed")
 
     finally:
-        status.stop()
+        if status:
+            status.stop()
 
 
 async def process_messages(client: ClientAsync):
@@ -84,7 +87,7 @@ async def process_messages(client: ClientAsync):
             client.process_waiting_messages()
             await sleep(0.05)
 
-    except KeyboardInterrupt:
+    except Exception:
         pass
 
 if __name__ == "__main__":

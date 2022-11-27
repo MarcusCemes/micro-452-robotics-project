@@ -1,7 +1,8 @@
-from app.console import *
+import math
 
 import numpy as np
-import math
+
+from app.utils.console import *
 
 """ THIS IS A NEW VERSION OF THE FILTER KALMAN.PY AND FILTERING:PY ARE OBSELETE """
 
@@ -9,7 +10,7 @@ DIAMETER = 9.5
 
 
 class ExtendedKalmanFilter(object):
-    """ 
+    """
     class containing every necessary function for EKF
 
     @variables:

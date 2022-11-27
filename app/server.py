@@ -1,11 +1,13 @@
 from asyncio import create_task
 from typing import Any
-from aiohttp import WSMsgType
-from aiohttp.web import Application, AppRunner, get, Request, TCPSite, WebSocketResponse
-from app.context import Context
 
-from app.console import *
+from aiohttp import WSMsgType
+from aiohttp.web import (Application, AppRunner, Request, TCPSite,
+                         WebSocketResponse, get)
+
+from app.context import Context
 from app.state import State
+from app.utils.console import *
 
 
 class Server:

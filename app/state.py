@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
 
 from app.config import PHYSICAL_SIZE, SUBDIVISIONS
-from app.types import Coords, Signal, Vec2
+from app.utils.types import Coords, Signal, Vec2
 
 
 @dataclass
