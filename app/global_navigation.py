@@ -1,68 +1,101 @@
+from asyncio import create_task
 from dataclasses import dataclass
 from time import perf_counter
 from typing import Generator
-from app.parallel import Pool
 
-from app.state import State, state
-
-SUBDIVISIONS = 64
-
-IntVec2 = tuple[int, int]
-FloatVec2 = tuple[float, float]
+from app.config import SUBDIVISIONS
+from app.context import Context
+from app.utils.types import Coords, Vec2
 
 
-async def recompute_path():
-    (path, time) = await Pool().run(find_optimal_path, state)
-    state.path = path
-    state.computation_time = time
-    state.mark_stale()
+@dataclass
+class PathFindingParams:
+    start: Vec2
+    end: Vec2
+    obstacles: list[Coords]
+    subdivision: int
+    physical_size: Vec2
 
 
-def find_optimal_path(state: State) -> tuple[list[FloatVec2] | None, float]:
-    algo = Dijkstra(state)
+@dataclass
+class PathFindingResult:
+    computation_time: float
+    path: list[Vec2] | None
+
+
+class GlobalNavigation:
+
+    def __init__(self, ctx: Context):
+        self.ctx = ctx
+
+    def __enter__(self):
+        self.task = create_task(self.run())
+        return self
+
+    def __exit__(self, *_):
+        self.task.cancel()
+
+    async def run(self):
+        while True:
+            await self.ctx.scene_update.wait()
+            await self.recompute_path()
+
+    async def recompute_path(self):
+        if not self.ctx.state.start or not self.ctx.state.end:
+            return False
+
+        params = PathFindingParams(
+            **self.ctx.__dict__, subdivision=SUBDIVISIONS)
+
+        result = await self.ctx.pool.run(find_optimal_path, params)
+
+        self.ctx.state.path = result.path
+        self.ctx.state.computation_time = result.computation_time
+        self.ctx.state.changed()
+
+        return True
+
+
+def find_optimal_path(params: PathFindingParams) -> PathFindingResult:
+    algo = Dijkstra(params)
 
     start_time = perf_counter()
     path = algo.calculate()
     end_time = perf_counter()
 
-    return (path, end_time - start_time)
+    return PathFindingResult(end_time - start_time, path)
 
 
 @dataclass
 class Node:
     distance: float = float("inf")
     visitable: bool = True
-    parent: IntVec2 | None = None
+    parent: Coords | None = None
     visited: bool = False
 
 
 class Dijkstra:
     def __init__(
         self,
-        state: State,
+        params: PathFindingParams,
     ):
-        self.graph = Graph(SUBDIVISIONS, state.physical_size)
+        self.size = params.physical_size
         self.path = None
 
-        self.start = self.graph.get_index(state.start)
-        self.end = self.graph.get_index(state.end)
-        self.size = state.physical_size
+        self.graph = Graph(SUBDIVISIONS, self.size)
+
+        self.start = self.graph.get_index(params.start)
+        self.end = self.graph.get_index(params.end)
 
         self.graph.node(self.start).distance = 0.0
 
-        self.apply_obstacles(state.obstacles)
+        self.apply_obstacles(params.obstacles)
 
-    def apply_obstacles(self, obstacles: list[tuple[FloatVec2, FloatVec2]]):
-        for (start, end) in obstacles:
-            start = self.graph.get_index(start)
-            end = self.graph.get_index(end)
+    def apply_obstacles(self, obstacles: list[Coords]):
+        for coords in obstacles:
+            self.graph.node(coords).visitable = False
 
-            for x in range(start[0], end[0] + 1):
-                for y in range(start[1], end[1] + 1):
-                    self.graph.node((x, y)).visitable = False
-
-    def calculate(self) -> list[FloatVec2] | None:
-
+    def calculate(self) -> list[Vec2] | None:
         if self.path:
             return self.path
 
@@ -101,7 +134,7 @@ class Dijkstra:
 
         return None
 
-    def calculate_path(self) -> list[FloatVec2]:
+    def calculate_path(self) -> list[Vec2]:
         path = []
         cursor = self.end
 
@@ -114,29 +147,29 @@ class Dijkstra:
 
 
 class Graph:
-    def __init__(self, subdivisions: int, size: FloatVec2):
+    def __init__(self, subdivisions: int, size: Vec2):
         self.size = size
         self.subdivisions = subdivisions
         self.nodes = [[Node() for _ in range(SUBDIVISIONS)]
                       for _ in range(SUBDIVISIONS)]
 
-    def node(self, coords: IntVec2) -> Node:
+    def node(self, coords: Coords) -> Node:
         (x, y) = coords
         return self.nodes[x][y]
 
-    def get_index(self, coords: FloatVec2) -> IntVec2:
+    def get_index(self, coords: Vec2) -> Coords:
         (x, y) = coords
         x = round(x * float(self.subdivisions) / self.size[0])
         y = round(y * float(self.subdivisions) / self.size[1])
         return (x, y)
 
-    def get_coords(self, index: IntVec2) -> FloatVec2:
+    def get_coords(self, index: Coords) -> Vec2:
         (x, y) = index
         x *= self.size[0] / float(self.subdivisions)
         y *= self.size[1] / float(self.subdivisions)
         return (x, y)
 
-    def neighbours(self, coords: IntVec2) -> Generator[tuple[IntVec2, float], None, None]:
+    def neighbours(self, coords: Coords) -> Generator[tuple[Coords, float], None, None]:
         (x, y) = coords
 
         for i in range(-1, 2):

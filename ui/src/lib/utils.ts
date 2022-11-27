@@ -1,4 +1,4 @@
-import type { App } from "./stores";
+import type { Scale } from "./stores";
 
 export class Vec2 {
     constructor(public x: number, public y: number) {}
@@ -31,14 +31,16 @@ export class Vec2 {
         return new Vec2(this.x - rhs.x, this.y - rhs.y);
     }
 
-    toScreenSpace(app: App): Vec2 {
-        const { mapSize, physicalSize } = app;
-        return this.divideBy(physicalSize).multiplyBy(mapSize);
+    toScreenSpace(scale: Scale): Vec2 {
+        const r = this.divideBy(scale.physicalSize).multiplyBy(scale.mapSize);
+        r.y = scale.mapSize.y - r.y;
+        return r;
     }
 
-    toPhysicalSpace(app: App): Vec2 {
-        const { mapSize, physicalSize } = app;
-        return this.divideBy(mapSize).multiplyBy(physicalSize);
+    toPhysicalSpace(scale: Scale): Vec2 {
+        const r = this.divideBy(scale.mapSize).multiplyBy(scale.physicalSize);
+        r.y = scale.physicalSize.y - r.y;
+        return r;
     }
 
     array(): [number, number] {
@@ -78,8 +80,4 @@ function expandObjects(x: ClassValue) {
 
 function isObject(x: unknown): x is { [index: string]: unknown } {
     return typeof x === "object" && x !== null;
-}
-
-export function px(x: number) {
-    return `${x}px`;
 }

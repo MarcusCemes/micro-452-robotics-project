@@ -1,12 +1,12 @@
 <script lang="ts">
-    import { app } from "./stores";
-    import type { Vec2 } from "./utils";
+    import { scale } from "$lib/stores";
+    import type { Vec2 } from "$lib/utils";
 
     export let from: Vec2;
     export let to: Vec2;
 
-    $: position = from.toScreenSpace($app);
-    $: size = to.sub(from).toScreenSpace($app);
+    $: position = from.toScreenSpace($scale);
+    $: size = to.sub(from).toScreenSpace($scale);
 </script>
 
 <div
