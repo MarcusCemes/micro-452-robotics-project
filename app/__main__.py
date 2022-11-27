@@ -1,4 +1,4 @@
-from asyncio import run
+from asyncio import create_task, run, sleep
 from rich.padding import Padding
 from rich.panel import Panel
 from tdmclient import ClientAsync
@@ -50,6 +50,7 @@ async def connect():
         with Pool() as pool:
             with ClientAsync() as client:
                 status.update("Waiting for Thymio node")
+                create_task(process_messages(client))
 
                 with await client.lock() as node:
                     status.stop()
@@ -71,6 +72,11 @@ async def connect():
     finally:
         status.stop()
 
+
+async def process_messages(client: ClientAsync):
+    while True:
+        client.process_waiting_messages()
+        await sleep(0.05)
 
 if __name__ == "__main__":
     main()

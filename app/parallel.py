@@ -2,13 +2,16 @@ from asyncio import get_running_loop
 from concurrent.futures import ProcessPoolExecutor
 from typing import Callable, ParamSpec, TypeVar
 
-POOL_SIZE = 4
+from app.config import POOL_SIZE
 
 T = TypeVar("T")
 P = ParamSpec("P")
 
 
 class Pool:
+
+    def __init__(self):
+        self.executor = None
 
     def __enter__(self, size=POOL_SIZE):
         assert self.executor is None

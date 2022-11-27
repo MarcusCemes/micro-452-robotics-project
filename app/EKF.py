@@ -1,5 +1,7 @@
+from app.console import *
+
 import numpy as np
-from app.state import state, State
+import math
 
 """ THIS IS A NEW VERSION OF THE FILTER KALMAN.PY AND FILTERING:PY ARE OBSELETE """
 
@@ -55,7 +57,7 @@ class ExtendedKalmanFilter(object):
                            [np.sin(self.E[2])*self.dt, 0],
                            [0, self.dt]])
 
-        self.U = np.matrix(0, 0)
+        self.U = np.matrix([0, 0])
 
         self.G = np.matrix([[1, 0, -np.sin(self.E[2])*self.dt*self.U[0]],
                             [0, 1, np.cos(self.E[2])*self.dt*self.U[0]],
@@ -80,8 +82,8 @@ class ExtendedKalmanFilter(object):
         """ 
         Updates B matrix
         """
-        self.B = np.matrix([[np.cos(self.E[2])*dt, 0],
-                           [np.sin(self.E[2])*dt, 0],
+        self.B = np.matrix([[math.cos(self.E[2])*dt, 0],
+                           [math.sin(self.E[2])*dt, 0],
                            [0, self.dt]])
 
     def update_U(self, speedL, speedR):
@@ -91,9 +93,10 @@ class ExtendedKalmanFilter(object):
         param speedL: left wheel speed sensor in cm/s
         param speedR: right wheel speed sensor in cm/s
         """
-        speed_forward = (speedL+speedR)/2
+        speed_forward = (speedL+speedR)/2.0
         speed_rotation = (speedL-speedR)/DIAMETER
-        self.U = np.matrix([speed_forward], [speed_rotation])
+        # debug("sf: "+str(speed_forward)+" sr: "+str(speed_rotation))
+        self.U = np.matrix([speed_forward, speed_rotation]).T
 
     def update_G(self):
         """ 
@@ -122,7 +125,7 @@ class ExtendedKalmanFilter(object):
         self.E = np.dot(self.A, self.E) + np.dot(self.B, self.U)
         # Calcul de la covariance de l'erreur
         self.P = np.dot(np.dot(self.G, self.P), self.G.T)+self.Q
-        return self.E[0], self.E[1], self.E[2]
+        return self.E[0].item(), self.E[1].item(), self.E[2].item()
 
     def update_ekf(self, z):
         """ 
@@ -142,4 +145,4 @@ class ExtendedKalmanFilter(object):
         I = np.eye(self.H.shape[1])
         self.P = (I-(K*self.H))*self.P
 
-        return self.E[0], self.E[1], self.E[2]
+        return self.E[0].item(), self.E[1].item(), self.E[2].item()

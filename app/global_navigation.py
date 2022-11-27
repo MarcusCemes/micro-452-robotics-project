@@ -45,28 +45,25 @@ class GlobalNavigation:
             return False
 
         params = PathFindingParams(
-            start=self.ctx.state.start,
-            end=self.ctx.state.end,
-            obstacles=self.ctx.state.obstacles,
-            subdivision=SUBDIVISIONS,
-            physical_size=self.ctx.state.physical_size,
-        )
+            **self.ctx.__dict__, subdivision=SUBDIVISIONS)
 
-        result = await self.ctx.pool.run(self.find_optimal_path, params)
+        result = await self.ctx.pool.run(find_optimal_path, params)
+
         self.ctx.state.path = result.path
         self.ctx.state.computation_time = result.computation_time
         self.ctx.state.changed()
 
         return True
 
-    def find_optimal_path(self, params: PathFindingParams) -> PathFindingResult:
-        algo = Dijkstra(params)
 
-        start_time = perf_counter()
-        path = algo.calculate()
-        end_time = perf_counter()
+def find_optimal_path(params: PathFindingParams) -> PathFindingResult:
+    algo = Dijkstra(params)
 
-        return PathFindingResult(end_time - start_time, path)
+    start_time = perf_counter()
+    path = algo.calculate()
+    end_time = perf_counter()
+
+    return PathFindingResult(end_time - start_time, path)
 
 
 @dataclass

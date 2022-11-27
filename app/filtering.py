@@ -1,9 +1,12 @@
-from asyncio import Event, create_task
+import traceback
+
+from asyncio import Event, create_task, sleep
 from time import time
 import math
 import numpy as np
 from app.context import Context
 
+from app.console import *
 from app.EKF import ExtendedKalmanFilter
 
 THYMIO_TO_CM = 3.85/100  # NEEDS TO BE MODIFIED ACCORDING TO THE THYMIO
@@ -17,25 +20,46 @@ class Filtering:
         self.on_update = Event()
         self.last_update = time()
 
-        self.ekf = ExtendedKalmanFilter(0,  math.pi/2)
+        self.ekf = ExtendedKalmanFilter((0, 0),  math.pi/2)
 
     def __enter__(self):
-        self.task = create_task(self.run())
+        # self.task = create_task(self.run())
+        debug("enter")
+        self.listener = self.ctx.node.add_variables_changed_listener(
+            self.on_variables_changed)
         return self
 
-    def __exit__(self):
-        self.task.cancel()
+    def __exit__(self, *_):
+        # self.task.cancel()
+        self.ctx.node.remove_variables_changed_listener(self.listener)
 
-    async def run(self):
-        while True:
-            node = self.ctx.node
+    def on_variables_changed(self, _node, variables):
+        try:
+            [vl] = variables["motor.left.speed"]
+            [vr] = variables["motor.right.speed"]
 
-            await node.wait_for_variables({"motor.left.speed", "motor.right.speed"})
-            vl = node.v.motor.left.speed
-            vr = node.v.motor.right.speed
+            # await node.wait_for_variables({"motor.left.speed", "motor.right.speed"})
+            # node.watch
+            # await sleep(0.1)
+            # debug("Got them!")
+            # debug("Got new motor speeds")
+            # vl = node.v.motor.left.speed
+            # vr = node.v.motor.right.speed
 
-            self.predict((vl, vr))
+            self.predict(vl, vr)
+            # debug("Predicted new position")
             self.ctx.pose_update.trigger()
+            self.ctx.state.changed()
+
+        except KeyError:  # if no change in motor speed, pass
+            pass
+
+        except KeyboardInterrupt as e:
+            raise e
+
+        except Exception:
+            debug("Problem!")
+            print(traceback.format_exc())
 
     async def wait_for_update(self):
         await self.on_update.wait()
@@ -45,20 +69,23 @@ class Filtering:
         raise Exception("Not implemented!")
 
     def predict(self, vl, vr):
+        print(vl, vr)
 
         now = time()
         dt = now - self.last_update
 
-        pose_x_est, pose_y_est, orientation_est = self.ekf.predict_ekf(self, vl, vr, dt)
+        pose_x_est, pose_y_est, orientation_est = self.ekf.predict_ekf(
+            vl, vr, dt)
+
         self.ctx.state.position = (pose_x_est, pose_y_est)
         self.ctx.state.orientation = orientation_est
-
 
         self.last_update = now
 
     def update(self, pose, orientation):  # from vision
-        #filter recomputation and context update
-        pose_x_est, pose_y_est, orientation_est = self.ekf.update_ekf(pose, orientation)
+        # filter recomputation and context update
+        z = np.array(pose, orientation)
+        pose_x_est, pose_y_est, orientation_est = self.ekf.update_ekf(z)
         self.ctx.state.position = (pose_x_est, pose_y_est)
         self.ctx.state.orientation = orientation_est
 

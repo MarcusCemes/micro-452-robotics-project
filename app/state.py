@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from app.config import PHYSICAL_SIZE, SUBDIVISIONS
 from app.types import Coords, Signal, Vec2
@@ -26,7 +26,7 @@ class State:
 
     # == Global Navigation == #
     path: list[Vec2] | None = None
-    obstacles: list[Coords] = []
+    obstacles: list[Coords] = field(default_factory=list)
     computation_time: float | None = None
 
     # == Vision == #

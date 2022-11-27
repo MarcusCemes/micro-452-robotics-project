@@ -1,5 +1,5 @@
 from asyncio import Event
-from dataclasses import dataclass
+
 
 Coords = tuple[int, int]
 Vec2 = tuple[float, float]

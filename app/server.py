@@ -14,7 +14,7 @@ class Server:
         self.ctx = ctx
 
     async def __aenter__(self, host="127.0.0.1", port=8080):
-        app = create_app(self.ctx.state)
+        app = create_app(self.ctx)
         runner = AppRunner(app)
         await runner.setup()
 
@@ -84,8 +84,9 @@ async def handle_message(msg: Any, ws: WebSocketResponse, ctx: Context):
     ctx.scene_update.trigger()
 
 
-def create_app(state: State):
+def create_app(ctx: Context):
     app = Application()
+    app["ctx"] = ctx
+
     app.add_routes([get('/ws', websocket_handler)])
-    app["state"] = state
     return app

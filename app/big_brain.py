@@ -1,7 +1,8 @@
 
-from asyncio import FIRST_COMPLETED, sleep, wait
+from asyncio import FIRST_COMPLETED, Event, create_task, sleep, wait
 
 from app.config import SUBDIVISIONS, SLEEP_INTERVAL
+from app.console import *
 from app.context import Context
 from app.filtering import Filtering
 from app.global_navigation import GlobalNavigation
@@ -17,6 +18,13 @@ class BigBrain:
         self.sleep_interval = sleep_interval
 
     async def start_thinking(self):
+
+        create_task(self.var_speed())
+        # create_task(self.print_speed())
+
+        await self.ctx.node.watch(variables=True)
+        # await self.ctx.node.wait_for_variables({"motor.left.speed", "motor.right.speed"})
+
         with Filtering(self.ctx) as filtering:
             with MotionControl(self.ctx) as motion_control:
                 with GlobalNavigation(self.ctx) as global_nav:
@@ -28,6 +36,15 @@ class BigBrain:
                         LocalNavigation(),
                     )
 
+    async def var_speed(self):
+        while True:
+            await sleep(2)
+            await self.ctx.node.set_variables(
+                {"motor.left.target": [0], "motor.right.target": [0]})
+            await sleep(2)
+            await self.ctx.node.set_variables(
+                {"motor.left.target": [100], "motor.right.target": [100]})
+
     async def loop(
         self,
         vision: Vision,
@@ -36,15 +53,18 @@ class BigBrain:
         global_nav: GlobalNavigation,
         local_nav: LocalNavigation,
     ):
+
+        await Event().wait()
+
         while True:
             frame = vision.next_frame(SUBDIVISIONS)
 
-            # TODO: Update state with obstac les
+            # TODO: Update state with obstacles
             self.ctx.scene_update.trigger()
 
-            filtering.update(frame.position, frame.orientation)
+            # filtering.update(frame.position, frame.orientation)
 
-            await self.sleep_until_event(filtering)
+            # await self.sleep_until_event(filtering)
 
             if local_nav.should_freestyle():
                 await local_nav.freestyle(motion_control)

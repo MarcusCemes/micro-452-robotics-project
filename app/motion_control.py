@@ -15,7 +15,7 @@ class MotionControl:
         self.task = create_task(self.run())
         return self
 
-    def __exit__(self):
+    def __exit__(self, *_):
         self.task.cancel()
 
     async def run(self):
