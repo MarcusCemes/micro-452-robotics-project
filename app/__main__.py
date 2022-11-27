@@ -50,13 +50,18 @@ async def connect():
         with Pool() as pool:
             with ClientAsync() as client:
                 status.update("Waiting for Thymio node")
-                create_task(process_messages(client))
 
                 with await client.lock() as node:
                     status.stop()
 
                     info("Connected")
                     debug(f"Node lock on {node}")
+
+                    # Signal the Thymio to broadcast variable changes
+                    await node.watch(variables=True)
+
+                    # Start processing Thymio messages
+                    create_task(process_messages(client))
 
                     ctx = Context(node, pool, State())
 
@@ -74,9 +79,13 @@ async def connect():
 
 
 async def process_messages(client: ClientAsync):
-    while True:
-        client.process_waiting_messages()
-        await sleep(0.05)
+    try:
+        while True:
+            client.process_waiting_messages()
+            await sleep(0.05)
+
+    except KeyboardInterrupt:
+        pass
 
 if __name__ == "__main__":
     main()

@@ -19,11 +19,7 @@ class BigBrain:
 
     async def start_thinking(self):
 
-        create_task(self.var_speed())
-        # create_task(self.print_speed())
-
-        await self.ctx.node.watch(variables=True)
-        # await self.ctx.node.wait_for_variables({"motor.left.speed", "motor.right.speed"})
+        create_task(self.do_start_stop())
 
         with Filtering(self.ctx) as filtering:
             with MotionControl(self.ctx) as motion_control:
@@ -36,7 +32,7 @@ class BigBrain:
                         LocalNavigation(),
                     )
 
-    async def var_speed(self):
+    async def do_start_stop(self):
         while True:
             await sleep(2)
             await self.ctx.node.set_variables(

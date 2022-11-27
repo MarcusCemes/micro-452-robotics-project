@@ -1,65 +1,35 @@
-import traceback
-
-from asyncio import Event, create_task, sleep
-from time import time
 import math
+from asyncio import Event
+from time import time
+
 import numpy as np
-from app.context import Context
 
 from app.console import *
+from app.context import Context
 from app.EKF import ExtendedKalmanFilter
+from app.utils.event_processor import ThymioEventProcessor
 
 THYMIO_TO_CM = 3.85/100  # NEEDS TO BE MODIFIED ACCORDING TO THE THYMIO
 
 
-class Filtering:
+class Filtering(ThymioEventProcessor):
 
     def __init__(self, ctx: Context):
-        self.ctx = ctx
+        super().__init__(ctx)
 
         self.on_update = Event()
         self.last_update = time()
 
         self.ekf = ExtendedKalmanFilter((0, 0),  math.pi/2)
 
-    def __enter__(self):
-        # self.task = create_task(self.run())
-        debug("enter")
-        self.listener = self.ctx.node.add_variables_changed_listener(
-            self.on_variables_changed)
-        return self
+    def process_event(self, variables):
+        [vl] = variables["motor.left.speed"]
+        [vr] = variables["motor.right.speed"]
 
-    def __exit__(self, *_):
-        # self.task.cancel()
-        self.ctx.node.remove_variables_changed_listener(self.listener)
+        self.predict(vl, vr)
 
-    def on_variables_changed(self, _node, variables):
-        try:
-            [vl] = variables["motor.left.speed"]
-            [vr] = variables["motor.right.speed"]
-
-            # await node.wait_for_variables({"motor.left.speed", "motor.right.speed"})
-            # node.watch
-            # await sleep(0.1)
-            # debug("Got them!")
-            # debug("Got new motor speeds")
-            # vl = node.v.motor.left.speed
-            # vr = node.v.motor.right.speed
-
-            self.predict(vl, vr)
-            # debug("Predicted new position")
-            self.ctx.pose_update.trigger()
-            self.ctx.state.changed()
-
-        except KeyError:  # if no change in motor speed, pass
-            pass
-
-        except KeyboardInterrupt as e:
-            raise e
-
-        except Exception:
-            debug("Problem!")
-            print(traceback.format_exc())
+        self.ctx.pose_update.trigger()
+        self.ctx.state.changed()
 
     async def wait_for_update(self):
         await self.on_update.wait()
@@ -69,8 +39,6 @@ class Filtering:
         raise Exception("Not implemented!")
 
     def predict(self, vl, vr):
-        print(vl, vr)
-
         now = time()
         dt = now - self.last_update
 
