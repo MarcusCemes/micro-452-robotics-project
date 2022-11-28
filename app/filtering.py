@@ -8,8 +8,7 @@ from app.context import Context
 from app.EKF import ExtendedKalmanFilter
 from app.utils.console import *
 from app.utils.event_processor import ThymioEventProcessor
-
-THYMIO_TO_CM = 3.85e-2  # NEEDS TO BE MODIFIED ACCORDING TO THE THYMIO
+from app.config import THYMIO_TO_CM
 
 
 class Filtering(ThymioEventProcessor):
@@ -19,12 +18,16 @@ class Filtering(ThymioEventProcessor):
 
         self.on_update = Event()
         self.last_update = time()
+        self.predict_counter = 0
 
         self.ekf = ExtendedKalmanFilter((0, 0),  math.pi/2)
 
     def process_event(self, variables):
         [vl] = variables["motor.left.speed"]
         [vr] = variables["motor.right.speed"]
+
+        vl = vl * THYMIO_TO_CM
+        vr = vr * THYMIO_TO_CM
 
         self.predict(vl, vr)
 
@@ -39,16 +42,27 @@ class Filtering(ThymioEventProcessor):
         raise Exception("Not implemented!")
 
     def predict(self, vl, vr):
+        
+        #solution bricolage 
+        if self.predict_counter == 0:
+            self.last_update = time()
+
         now = time()
         dt = now - self.last_update
+        print("prediction number: " + str(self.predict_counter))
+        #print(" dt = " + str(dt))
 
         pose_x_est, pose_y_est, orientation_est = self.ekf.predict_ekf(
             vl, vr, dt)
+
 
         self.ctx.state.position = (pose_x_est, pose_y_est)
         self.ctx.state.orientation = orientation_est
 
         self.last_update = now
+        self.predict_counter += 1
+
+        print("x = " + str(pose_x_est) + " y =" + str(pose_y_est))
 
     def update(self, pose, orientation):  # from vision
         # filter recomputation and context update
