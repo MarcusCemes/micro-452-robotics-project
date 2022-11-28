@@ -8,8 +8,7 @@ from app.context import Context
 
 from app.console import *
 from app.EKF import ExtendedKalmanFilter
-
-THYMIO_TO_CM = 3.85/100  # NEEDS TO BE MODIFIED ACCORDING TO THE THYMIO
+from app.config import THYMIO_TO_CM
 
 
 class Filtering:
@@ -19,6 +18,7 @@ class Filtering:
 
         self.on_update = Event()
         self.last_update = time()
+        self.predict_counter = 0
 
         self.ekf = ExtendedKalmanFilter((0, 0),  math.pi/2)
 
@@ -37,6 +37,9 @@ class Filtering:
         try:
             [vl] = variables["motor.left.speed"]
             [vr] = variables["motor.right.speed"]
+
+            vl = vl * THYMIO_TO_CM
+            vr = vr * THYMIO_TO_CM
 
             # await node.wait_for_variables({"motor.left.speed", "motor.right.speed"})
             # node.watch
@@ -69,18 +72,27 @@ class Filtering:
         raise Exception("Not implemented!")
 
     def predict(self, vl, vr):
-        print(vl, vr)
+        
+        #solution bricolage 
+        if self.predict_counter == 0:
+            self.last_update = time()
 
         now = time()
         dt = now - self.last_update
+        print("prediction number: " + str(self.predict_counter))
+        #print(" dt = " + str(dt))
 
         pose_x_est, pose_y_est, orientation_est = self.ekf.predict_ekf(
             vl, vr, dt)
+
 
         self.ctx.state.position = (pose_x_est, pose_y_est)
         self.ctx.state.orientation = orientation_est
 
         self.last_update = now
+        self.predict_counter += 1
+
+        print("x = " + str(pose_x_est) + " y =" + str(pose_y_est))
 
     def update(self, pose, orientation):  # from vision
         # filter recomputation and context update

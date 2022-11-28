@@ -3,10 +3,9 @@ from app.console import *
 import numpy as np
 import math
 
+from app.config import DIAMETER
+
 """ THIS IS A NEW VERSION OF THE FILTER KALMAN.PY AND FILTERING:PY ARE OBSELETE """
-
-DIAMETER = 9.5
-
 
 class ExtendedKalmanFilter(object):
     """ 
@@ -53,14 +52,14 @@ class ExtendedKalmanFilter(object):
                             [0, 1, 0],
                             [0, 0, 1]])
 
-        self.B = np.matrix([[np.cos(self.E[2])*self.dt, 0],
-                           [np.sin(self.E[2])*self.dt, 0],
+        self.B = np.matrix([[math.cos(self.E[2])*self.dt, 0],
+                           [math.sin(self.E[2])*self.dt, 0],
                            [0, self.dt]])
 
         self.U = np.matrix([0, 0])
 
-        self.G = np.matrix([[1, 0, -np.sin(self.E[2])*self.dt*self.U[0]],
-                            [0, 1, np.cos(self.E[2])*self.dt*self.U[0]],
+        self.G = np.matrix([[1, 0, -math.sin(self.E[2])*self.dt*self.U[0]],
+                            [0, 1, math.cos(self.E[2])*self.dt*self.U[0]],
                             [0, 0, 1]])
 
         # Matrice d'observation, on observe que x et y
@@ -84,7 +83,7 @@ class ExtendedKalmanFilter(object):
         """
         self.B = np.matrix([[math.cos(self.E[2])*dt, 0],
                            [math.sin(self.E[2])*dt, 0],
-                           [0, self.dt]])
+                           [0, dt]])
 
     def update_U(self, speedL, speedR):
         """ 
@@ -102,8 +101,9 @@ class ExtendedKalmanFilter(object):
         """ 
         Updates G matrix
         """
-        self.G = np.matrix([[1, 0, -np.sin(self.E[2])*self.dt*self.U[0]],
-                            [0, 1, np.cos(self.E[2])*self.dt*self.U[0]],
+
+        self.G = np.matrix([[1, 0, -math.sin(self.E[2])*self.dt*self.U[0]],
+                            [0, 1, math.cos(self.E[2])*self.dt*self.U[0]],
                             [0, 0, 1]])
 
     def predict_ekf(self, speedL, speedR, dt):
