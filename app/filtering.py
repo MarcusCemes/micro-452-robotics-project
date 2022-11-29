@@ -8,7 +8,7 @@ from app.context import Context
 from app.EKF import ExtendedKalmanFilter
 from app.utils.console import *
 from app.utils.event_processor import ThymioEventProcessor
-from app.config import THYMIO_TO_CM
+from app.config import THYMIO_TO_CM, DT_THRESHOLD
 
 
 class Filtering(ThymioEventProcessor):
@@ -51,6 +51,9 @@ class Filtering(ThymioEventProcessor):
         dt = now - self.last_update
         print("prediction number: " + str(self.predict_counter))
         #print(" dt = " + str(dt))
+        
+        if dt>DT_THRESHOLD: 
+           return  
 
         pose_x_est, pose_y_est, orientation_est = self.ekf.predict_ekf(
             vl, vr, dt)
