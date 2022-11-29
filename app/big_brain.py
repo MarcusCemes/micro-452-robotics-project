@@ -19,27 +19,34 @@ class BigBrain:
 
     async def start_thinking(self):
 
-        create_task(self.do_start_stop())
+        create_task(self.do_pings())
+        # create_task(self.do_start_stop())
 
         with Filtering(self.ctx) as filtering, \
                 MotionControl(self.ctx) as motion_control, \
-                GlobalNavigation(self.ctx) as global_nav:
+                GlobalNavigation(self.ctx) as global_nav, \
+                LocalNavigation(self.ctx) as local_nav:
 
             await self.loop(
-                Vision(self.ctx),
+                Vision(self.ctx, False),
                 filtering,
                 motion_control,
                 global_nav,
-                LocalNavigation(self.ctx),
+                local_nav,
             )
+
+    async def do_pings(self):
+        while True:
+            await sleep(1)
+            print("🏓 ping")
 
     async def do_start_stop(self):
         try:
             while True:
                 await sleep(2)
-                await self.ctx.node.set_variables(
-                    {"motor.left.target": [0], "motor.right.target": [0]})
-                await sleep(2)
+                # await self.ctx.node.set_variables(
+                #    {"motor.left.target": [0], "motor.right.target": [0]})
+                # await sleep(2)
                 await self.ctx.node.set_variables(
                     {"motor.left.target": [100], "motor.right.target": [100]})
 
@@ -55,9 +62,17 @@ class BigBrain:
         local_nav: LocalNavigation,
     ):
 
-        await Event().wait()
-
         while True:
+
+            if not local_nav.should_freestyle():
+                await sleep(0.1)
+                continue
+
+            print("entering freestyle 💃🕺")
+            await local_nav.freestyle()
+            await motion_control.update_motor_control()
+            continue
+
             frame = vision.next_frame(SUBDIVISIONS)
 
             # TODO: Update state with obstacles

@@ -1,4 +1,5 @@
 from asyncio import create_task
+from traceback import print_exception
 from typing import Any
 
 from aiohttp import WSMsgType
@@ -52,13 +53,31 @@ async def websocket_handler(request: Request):
     except ConnectionResetError:
         pass
 
+    except Exception as e:
+        error("[server] Error sending initial state!")
+        print_exception(e)
+        print(ctx.state)
+
+        print("type of relative_distances", type(
+            ctx.state.relative_distances[0]))
+
+        if ctx.state.prox_sensors:
+            print("type of prox_sensors", type(ctx.state.prox_sensors[0]))
+
     return ws
 
 
 async def handle_tx(ws: WebSocketResponse, state: State):
-    while True:
-        await state.wait_changed()
-        await ws.send_json({"type": "patch", "data": state.__dict__})
+    try:
+        while True:
+            await state.wait_changed()
+            debug("Sending new patch to websocket")
+            await ws.send_json({"type": "patch", "data": state.__dict__})
+
+    except Exception as e:
+        error("[server] Error sending patch!")
+        print_exception(e)
+        print(state)
 
 
 async def handle_rx(ws: WebSocketResponse, ctx: Context):

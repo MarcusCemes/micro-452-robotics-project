@@ -26,6 +26,7 @@ class State:
 
     # == Global Navigation == #
     path: list[Vec2] | None = None
+    next_waypoint_index: int | None = None
     obstacles: list[Coords] = field(default_factory=list)
     computation_time: float | None = None
 
@@ -33,8 +34,14 @@ class State:
     subdivision: int = SUBDIVISIONS
     physical_size: Vec2 = PHYSICAL_SIZE
 
+    # == Local Navigation == #
+    prox_sensors: list[float] | None = None
+    relative_distances: list[Coords] = field(default_factory=list)
+    reactive_control: bool | None = None
+
     def changed(self):
         """Wake up all tasks waiting for the state to be changed."""
+        print("🛎️ State changed")
         self._dirty.trigger()
 
     async def wait_changed(self):

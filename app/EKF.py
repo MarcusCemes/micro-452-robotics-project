@@ -8,6 +8,7 @@ from app.config import DIAMETER
 
 """ THIS IS A NEW VERSION OF THE FILTER KALMAN.PY AND FILTERING:PY ARE OBSELETE """
 
+
 class ExtendedKalmanFilter(object):
     """
     class containing every necessary function for EKF
@@ -94,7 +95,7 @@ class ExtendedKalmanFilter(object):
         param speedR: right wheel speed sensor in cm/s
         """
         speed_forward = (speedL+speedR)/2.0
-        speed_rotation = (speedL-speedR)/DIAMETER
+        speed_rotation = (speedR-speedL)/DIAMETER
         # debug("sf: "+str(speed_forward)+" sr: "+str(speed_rotation))
         self.U = np.matrix([speed_forward, speed_rotation]).T
 
