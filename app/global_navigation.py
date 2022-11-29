@@ -5,6 +5,8 @@ from typing import Generator
 
 from app.config import SUBDIVISIONS
 from app.context import Context
+from app.state import Obstacle
+from app.utils.background_task import BackgroundTask
 from app.utils.types import Coords, Vec2
 
 
@@ -13,6 +15,7 @@ class PathFindingParams:
     start: Vec2
     end: Vec2
     obstacles: list[Coords]
+    extra_obstacles: list[Obstacle]
     subdivision: int
     physical_size: Vec2
 
@@ -23,17 +26,11 @@ class PathFindingResult:
     path: list[Vec2] | None
 
 
-class GlobalNavigation:
+class GlobalNavigation(BackgroundTask):
 
     def __init__(self, ctx: Context):
+        super().__init__()
         self.ctx = ctx
-
-    def __enter__(self):
-        self.task = create_task(self.run())
-        return self
-
-    def __exit__(self, *_):
-        self.task.cancel()
 
     async def run(self):
         while True:
@@ -45,7 +42,13 @@ class GlobalNavigation:
             return False
 
         params = PathFindingParams(
-            **self.ctx.__dict__, subdivision=SUBDIVISIONS)
+            end=self.ctx.state.end,
+            obstacles=self.ctx.state.obstacles,
+            extra_obstacles=self.ctx.state.extra_obstacles,
+            physical_size=self.ctx.state.physical_size,
+            start=self.ctx.state.start,
+            subdivision=self.ctx.state.subdivision
+        )
 
         result = await self.ctx.pool.run(find_optimal_path, params)
 
@@ -66,7 +69,7 @@ def find_optimal_path(params: PathFindingParams) -> PathFindingResult:
     return PathFindingResult(end_time - start_time, path)
 
 
-@dataclass
+@ dataclass
 class Node:
     distance: float = float("inf")
     visitable: bool = True
@@ -90,10 +93,26 @@ class Dijkstra:
         self.graph.node(self.start).distance = 0.0
 
         self.apply_obstacles(params.obstacles)
+        self.apply_extra_obstacles(params.extra_obstacles)
 
     def apply_obstacles(self, obstacles: list[Coords]):
         for coords in obstacles:
             self.graph.node(coords).visitable = False
+
+    def apply_extra_obstacles(self, obstacles: list[Obstacle]):
+        for obstacle in obstacles:
+            for coords in self.obstacle_coords(obstacle):
+                self.graph.node(coords).visitable = False
+
+    def obstacle_coords(self, obstacle: Obstacle) -> Generator[Coords, None, None]:
+        (x1, y1) = self.graph.get_index(obstacle[0])
+        (x2, y2) = self.graph.get_index(obstacle[1])
+
+        for x in range(x1, x2 + 1):
+            for y in range(y1, y2 + 1):
+                coords = (x, y)
+                if self.graph.coords_in_bounds(coords):
+                    yield coords
 
     def calculate(self) -> list[Vec2] | None:
         if self.path:
@@ -168,6 +187,10 @@ class Graph:
         x *= self.size[0] / float(self.subdivisions)
         y *= self.size[1] / float(self.subdivisions)
         return (x, y)
+
+    def coords_in_bounds(self, coords: Coords) -> bool:
+        (x, y) = coords
+        return 0 <= x < self.subdivisions and 0 <= y < self.subdivisions
 
     def neighbours(self, coords: Coords) -> Generator[tuple[Coords, float], None, None]:
         (x, y) = coords

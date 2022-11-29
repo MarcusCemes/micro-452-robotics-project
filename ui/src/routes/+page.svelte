@@ -8,7 +8,9 @@
         <Sidebar />
     </div>
 
-    <div class="col-span-3 flex justify-center items-center bg-gray-50">
+    <div
+        class="col-span-3 flex flex-col justify-center items-center bg-gray-50"
+    >
         <Map />
     </div>
 </div>

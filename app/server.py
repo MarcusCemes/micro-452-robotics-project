@@ -7,7 +7,7 @@ from aiohttp.web import (Application, AppRunner, Request, TCPSite,
                          WebSocketResponse, get)
 
 from app.context import Context
-from app.state import State
+from app.state import State, normalise_obstacle
 from app.utils.console import *
 
 
@@ -71,8 +71,10 @@ async def handle_tx(ws: WebSocketResponse, state: State):
     try:
         while True:
             await state.wait_changed()
-            debug("Sending new patch to websocket")
             await ws.send_json({"type": "patch", "data": state.__dict__})
+
+    except ConnectionResetError:
+        pass
 
     except Exception as e:
         error("[server] Error sending patch!")
@@ -94,12 +96,19 @@ async def handle_message(msg: Any, ws: WebSocketResponse, ctx: Context):
 
         case "set_start":
             ctx.state.start = msg["data"]
+            ctx.scene_update.trigger()
 
         case "set_end":
+            ctx.scene_update.trigger()
             ctx.state.end = msg["data"]
 
         case "add_obstacle":
-            ctx.state.obstacles.append(msg["data"])
+            ctx.state.extra_obstacles.append(normalise_obstacle(msg["data"]))
+            ctx.scene_update.trigger()
+
+        case "clear_obstacles":
+            ctx.state.extra_obstacles = []
+            ctx.scene_update.trigger()
 
     ctx.state.changed()
     ctx.scene_update.trigger()

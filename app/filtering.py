@@ -46,7 +46,6 @@ class Filtering(ThymioEventProcessor):
         # solution bricolage
         if self.predict_counter == 0:
             self.last_update = time()
-        print("entering filtering")
         now = time()
         dt = now - self.last_update
         #print("prediction number: " + str(self.predict_counter))

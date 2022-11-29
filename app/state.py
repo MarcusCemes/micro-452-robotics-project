@@ -3,6 +3,8 @@ from dataclasses import dataclass, field
 from app.config import PHYSICAL_SIZE, SUBDIVISIONS
 from app.utils.types import Coords, Signal, Vec2
 
+Obstacle = tuple[Vec2, Vec2]
+
 
 @dataclass
 class State:
@@ -28,6 +30,7 @@ class State:
     path: list[Vec2] | None = None
     next_waypoint_index: int | None = None
     obstacles: list[Coords] = field(default_factory=list)
+    extra_obstacles: list[Obstacle] = field(default_factory=list)
     computation_time: float | None = None
 
     # == Vision == #
@@ -41,9 +44,17 @@ class State:
 
     def changed(self):
         """Wake up all tasks waiting for the state to be changed."""
-        print("🛎️ State changed")
         self._dirty.trigger()
 
     async def wait_changed(self):
         """Wait for the state to be marked as changed."""
         await self._dirty.wait()
+
+
+def normalise_obstacle(obstacle: Obstacle) -> Obstacle:
+    """
+    Rearrange obstacle vector components, such that the first vector points
+    to the bottom-left of the obstacle (minimum components), vice-versa.
+    """
+    ((ax, ay), (bx, by)) = obstacle
+    return ((min(ax, bx), min(ay, by)), (max(ax, bx), max(ay, by)))

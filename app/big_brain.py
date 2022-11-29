@@ -19,7 +19,7 @@ class BigBrain:
 
     async def start_thinking(self):
 
-        create_task(self.do_pings())
+        # create_task(self.do_pings())
         # create_task(self.do_start_stop())
 
         with Filtering(self.ctx) as filtering, \
@@ -68,7 +68,7 @@ class BigBrain:
                 await sleep(0.1)
                 continue
 
-            print("entering freestyle 💃🕺")
+            # print("entering freestyle 💃🕺")
             await local_nav.freestyle()
             await motion_control.update_motor_control()
             continue

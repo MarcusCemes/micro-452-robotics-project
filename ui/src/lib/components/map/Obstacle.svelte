@@ -4,12 +4,29 @@
 
     export let from: Vec2;
     export let to: Vec2;
+    export let screenSpace = false;
 
-    $: position = from.toScreenSpace($scale);
-    $: size = to.sub(from).toScreenSpace($scale);
+    $: styles = calculateStyles(from, to, screenSpace);
+
+    function calculateStyles(from: Vec2, to: Vec2, screenSpace: boolean) {
+        if (!screenSpace) {
+            from = from.toScreenSpace($scale);
+            to = to.toScreenSpace($scale);
+        }
+
+        return {
+            top: `${Math.min(to.y, from.y)}px`,
+            left: `${Math.min(from.x, to.x)}px`,
+            width: `${Math.abs(to.x - from.x)}px`,
+            height: `${Math.abs(from.y - to.y)}px`,
+        };
+    }
 </script>
 
 <div
     class="absolute bg-black"
-    style={`left: ${position.x}px; top: ${position.y}px; width: ${size.x}px; height: ${size.y}px;`}
+    style:top={styles.top}
+    style:left={styles.left}
+    style:width={styles.width}
+    style:height={styles.height}
 />

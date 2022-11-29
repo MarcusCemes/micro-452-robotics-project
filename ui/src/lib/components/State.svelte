@@ -18,4 +18,4 @@
 
 <h2 class="mb-2 text-xl font-bold">State</h2>
 <pre
-    class="p-2 bg-gray-100 rounded font-mono overflow-x-auto text-sm">{stateText}</pre>
+    class="max-h-96 p-2 bg-gray-100 rounded font-mono overflow-x-auto overflow-y-auto  text-sm">{stateText}</pre>
