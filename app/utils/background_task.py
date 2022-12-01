@@ -1,5 +1,5 @@
 from asyncio import create_task
-from traceback import print_exception
+from traceback import print_exc
 
 from app.utils.console import *
 
@@ -17,10 +17,10 @@ class BackgroundTask:
         try:
             await self.run()
 
-        except Exception as e:
+        except Exception:
             name = type(self).__name__
             error(f"[{name}/BackgroundTask] Coroutine raised an exception!")
-            print_exception(e)
+            print_exc()
 
     async def run(self):
         name = type(self).__name__

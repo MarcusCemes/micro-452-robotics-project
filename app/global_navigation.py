@@ -14,7 +14,7 @@ from app.utils.types import Coords, Vec2
 class PathFindingParams:
     start: Vec2
     end: Vec2
-    obstacles: list[Coords]
+    obstacles: list[list[int]]
     extra_obstacles: list[Obstacle]
     subdivision: int
     physical_size: Vec2
@@ -95,9 +95,15 @@ class Dijkstra:
         self.apply_obstacles(params.obstacles)
         self.apply_extra_obstacles(params.extra_obstacles)
 
-    def apply_obstacles(self, obstacles: list[Coords]):
-        for coords in obstacles:
-            self.graph.node(coords).visitable = False
+    def apply_obstacles(self, obstacles: list[list[int]]):
+        for y, row in enumerate(obstacles):
+            for x, value in enumerate(row):
+                if x == 14 and y == 32:
+                    print(f"x = {x}, y = {y}, value = {value}")
+                coords = (x, y)
+                visitable = not bool(value)
+                if not visitable and self.graph.coords_in_bounds(coords):
+                    self.graph.node(coords).visitable = False
 
     def apply_extra_obstacles(self, obstacles: list[Obstacle]):
         for obstacle in obstacles:

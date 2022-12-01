@@ -1,4 +1,4 @@
-from asyncio import Event
+from asyncio import Event, wait_for
 
 
 Coords = tuple[int, int]
@@ -20,5 +20,5 @@ class Signal:
         self._event.set()
         self._event.clear()
 
-    async def wait(self):
-        await self._event.wait()
+    async def wait(self, timeout: float | None = None):
+        await wait_for(self._event.wait(), timeout)

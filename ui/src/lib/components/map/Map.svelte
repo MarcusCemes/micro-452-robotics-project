@@ -8,20 +8,32 @@
     import Thymio from "./Thymio.svelte";
 
     let map: HTMLDivElement;
+    let canvas: HTMLCanvasElement;
     let action: "start" | "end" | "obstacle" | null = null;
 
     let obstacleStart: Vec2 | null = null;
     let mousePosition: Vec2 | null = null;
 
     $: e = $state;
+    $: console.log(e);
 
     $: start = Vec2.parse(e.state.start);
     $: end = Vec2.parse(e.state.end);
+    $: subdivisions = (e.state.subdivisions as number | undefined) || 64;
 
     $: position = Vec2.parse(e.state.position);
     $: orientation = e.state.orientation as number | undefined;
 
     $: path = e.state.path as [number, number][] | undefined;
+
+    $: physicalMousePosition = mousePosition?.toPhysicalSpace($scale);
+
+    $: coordinateMousePosition = physicalMousePosition?.multiplyBy(
+        new Vec2(
+            subdivisions / $scale.physicalSize.x,
+            subdivisions / $scale.physicalSize.y
+        )
+    );
 
     $: pathPoints = path
         ?.map((r) => {
@@ -31,12 +43,45 @@
         .filter((x) => !!x)
         .join(",");
 
-    $: obstacles = e.state.extra_obstacles as
+    $: obstacles = e.state.obstacles as [number, number][] | undefined;
+    $: if (obstacles) drawObstacles(obstacles, canvas);
+
+    $: extraObstacles = e.state.extra_obstacles as
         | [[number, number], [number, number]][]
         | undefined;
 
-    $: obstacleVectors =
-        obstacles?.map(([a, b]) => [Vec2.parse(a), Vec2.parse(b)]) ?? [];
+    $: extraObstacleVectors =
+        extraObstacles?.map(([a, b]) => [Vec2.parse(a), Vec2.parse(b)]) ?? [];
+
+    function drawObstacles(obstacles: number[][], canvas?: HTMLCanvasElement) {
+        if (!canvas) return;
+
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+
+        const subdivisions =
+            ($state.state.subdivisions as number | undefined) || 64;
+
+        ctx.save();
+        ctx.fillStyle = "black";
+
+        ctx.scale(
+            $scale.mapSize.x / subdivisions,
+            $scale.mapSize.y / subdivisions
+        );
+
+        for (let x = 0; x < obstacles.length; x++) {
+            const row = obstacles[x];
+            for (let y = 0; y < row.length; y++) {
+                const mappedY = row.length - y - 1;
+                if (row[y] === 1) {
+                    ctx.fillRect(x, mappedY, 1, 1);
+                }
+            }
+        }
+
+        ctx.restore();
+    }
 
     function clearObstacles() {
         send("clear_obstacles", null);
@@ -89,6 +134,10 @@
         const y = event.clientY - rect.top;
         return new Vec2(x, y);
     }
+
+    function formatNumber(n?: number | null, digits: number = 2, padding = 4) {
+        return n ? n.toFixed(digits).padStart(padding) : "-".padStart(padding);
+    }
 </script>
 
 <div class="mb-2">
@@ -118,7 +167,14 @@
     bind:clientHeight={$mapSize.y}
     class="relative w-96 h-96 border border-gray-300 rounded bg-white"
 >
-    {#each obstacleVectors as [from, to]}
+    <canvas
+        bind:this={canvas}
+        width={$mapSize.x}
+        height={$mapSize.y}
+        class="absolute top-0 left-0"
+    />
+
+    {#each extraObstacleVectors as [from, to]}
         {#if from && to}
             <Obstacle {from} {to} />
         {/if}
@@ -159,4 +215,18 @@
     {#if position && orientation}
         <Thymio {position} {orientation} />
     {/if}
+</div>
+
+<div>
+    <div>
+        x: {formatNumber(physicalMousePosition?.x)}cm - y: {formatNumber(
+            physicalMousePosition?.y
+        )}cm
+    </div>
+    <div>
+        i: {formatNumber(coordinateMousePosition?.x, 0)} - j: {formatNumber(
+            coordinateMousePosition?.y,
+            0
+        )}
+    </div>
 </div>

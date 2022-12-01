@@ -31,6 +31,10 @@ export class Vec2 {
         return new Vec2(this.x - rhs.x, this.y - rhs.y);
     }
 
+    floor(): Vec2 {
+        return new Vec2(Math.floor(this.x), Math.floor(this.y));
+    }
+
     toScreenSpace(scale: Scale, invertY = true): Vec2 {
         const r = this.divideBy(scale.physicalSize).multiplyBy(scale.mapSize);
         if (invertY) r.y = scale.mapSize.y - r.y;

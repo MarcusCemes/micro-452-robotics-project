@@ -1,10 +1,13 @@
 from typing import Any
 import numpy as np
 import math
+from time import time
 
 from app.context import Context
 from app.motion_control import MotionControl
+from app.utils.background_task import BackgroundTask
 from app.utils.event_processor import ThymioEventProcessor
+from app.config import PIXELS_PER_CM, FINAL_SIZE
 
 
 center_offset = np.array([5.5, 5.5])
@@ -24,23 +27,45 @@ thymiospeed_to_cm = 21.73913043478261/50/10
 
 
 class LocalNavigation(ThymioEventProcessor):
-    def __init__(self, ctx: Context):
+
+    def __init__(self, ctx: Context, motion_control: MotionControl):
         self.ctx = ctx
+        self.motion_control = motion_control
 
-    def should_freestyle(self) -> bool:
-        return self.ctx.state.prox_sensors is not None
+        self.map = np.array((FINAL_SIZE, FINAL_SIZE), dtype=bool)
+        self.last_time = time()
 
-    async def freestyle(self):
-        reactive_control = True
+    def should_freestyle(self):
+        distances = np.array(self.ctx.state.relative_distances)
+        if (distances.min() < 3.5):
+            self.ctx.state.reactive_control = True
+            self.last_time = time()
+            return
 
-        self.ctx.state.reactive_control = reactive_control
+        now = time()
+        dt = now - self.last_time
+        if dt > 1.5 and self.ctx.state.reactive_control:
+            self.ctx.state.reactive_control = False
+            self.motion_control.setNewWaypoint()
 
+    def update(self):
         allDistances = self.getDistanceArray()
         self.ctx.state.relative_distances = allDistances.tolist()
+
+    def updateMap(self):
+        relativeWalls = self.getWallRelative()
+        for i in range(len(relativeWalls)):
+            if (relativeWalls[i] != None):
+                globalPos = self.wayPointPerceivedToReal(relativeWalls[i])
+                indexes = globalPos/PIXELS_PER_CM
+                self.map[int(indexes[0])][int(indexes[1])] = True
 
     def process_event(self, variables: dict[str, Any]):
         self.ctx.state.prox_sensors = variables["prox.horizontal"]
         self.ctx.state.changed()
+
+        self.update()
+        self.should_freestyle()
 
     def rotate(self, angle, coords):
         R = np.array([[np.cos(angle), -np.sin(angle)],
@@ -48,12 +73,12 @@ class LocalNavigation(ThymioEventProcessor):
 
         return R.dot(coords.transpose()).transpose()
 
-    def wayPointPerceivedToReal(self, wayPointPerceived, currentPos):
-        newA = wayPointPerceived[2]+currentPos[2]
+    def wayPointPerceivedToReal(self, wayPointPerceived):
+        pos = self.ctx.state.position
         coords = np.array([wayPointPerceived[0], wayPointPerceived[1]])
-        wayPoint = self.rotate(currentPos[2], coords)
-        [x, y] = wayPoint+np.array([currentPos[0], currentPos[1]])
-        return np.array([x, y, newA])
+        wayPoint = self.rotate(self.ctx.state.orientation, coords)
+        [x, y] = wayPoint+np.array([0, 0])
+        return np.array([x, y])
 
     def getDistance(self, sensorValue, SensorsValuesConversion):
         idx1 = np.abs(SensorsValuesConversion[:, 1] - sensorValue).argmin()
@@ -78,33 +103,32 @@ class LocalNavigation(ThymioEventProcessor):
     def getDistanceArray(self):
         proxSensor = np.array(self.ctx.state.prox_sensors)
         proxDistance = []
-        proxDistance = proxDistance + \
-            [self.getDistance(proxSensor[0], SensorsValuesFront)]
-        proxDistance = proxDistance + \
-            [self.getDistance(proxSensor[1], SensorsValuesDiag)]
-        proxDistance = proxDistance + \
-            [self.getDistance(proxSensor[2], SensorsValuesFront)]
-        proxDistance = proxDistance + \
-            [self.getDistance(proxSensor[3], SensorsValuesDiag)]
-        proxDistance = proxDistance + \
-            [self.getDistance(proxSensor[4], SensorsValuesFront)]
-        proxDistance = proxDistance + \
-            [self.getDistance(proxSensor[5], SensorsValuesBack)]
-        proxDistance = proxDistance + \
-            [self.getDistance(proxSensor[6], SensorsValuesBack)]
+        proxDistance = proxDistance +
+        [self.getDistance(proxSensor[0], SensorsValuesFront)]
+        proxDistance = proxDistance +
+        [self.getDistance(proxSensor[1], SensorsValuesDiag)]
+        proxDistance = proxDistance +
+        [self.getDistance(proxSensor[2], SensorsValuesFront)]
+        proxDistance = proxDistance +
+        [self.getDistance(proxSensor[3], SensorsValuesDiag)]
+        proxDistance = proxDistance +
+        [self.getDistance(proxSensor[4], SensorsValuesFront)]
+        proxDistance = proxDistance +
+        [self.getDistance(proxSensor[5], SensorsValuesBack)]
+        proxDistance = proxDistance +
+        [self.getDistance(proxSensor[6], SensorsValuesBack)]
         return np.array(proxDistance)
 
-    def getWall(self, delta):
-        proxSensor = np.array(self.ctx.state.prox_sensors)
-        distAray = self.getDistanceArray()
+    def getWallRelative(self):
+        distAray = np.array(self.ctx.state.relative_distances)
         obstacle_positions = []
-        for i in range(len(proxSensor)):
-            obstacle_positionsi = []
+        for i in range(len(distAray)):
+            obstacle_positionsi = None
             if (distAray[i] != -1):
                 obstacle_positionsi = [[], []]
                 ti = math.atan2(
-                    sensor_pos_from_center[i+delta][1], sensor_pos_from_center[i+delta][0])
-                obstacle_positionsi = [sensor_pos_from_center[i+delta][0] + distAray[i]*math.cos(
-                    ti),  sensor_pos_from_center[i+delta][1] + distAray[i]*math.sin(ti)]
+                    sensor_pos_from_center[i][1], sensor_pos_from_center[i][0])
+                obstacle_positionsi = [sensor_pos_from_center[i][0] + distAray[i]*math.cos(
+                    ti),  sensor_pos_from_center[i][1] + distAray[i]*math.sin(ti)]
             obstacle_positions = obstacle_positions+[obstacle_positionsi]
         return (obstacle_positions)

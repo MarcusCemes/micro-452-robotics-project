@@ -7,6 +7,8 @@ from app.context import Context
 from app.utils.background_task import BackgroundTask
 from app.utils.types import Vec2
 
+MAX_WAIT = 0.1
+
 
 class MotionControl(BackgroundTask):
 
@@ -20,23 +22,46 @@ class MotionControl(BackgroundTask):
         self.ctx = ctx
         self.waypoint = None
 
+    def setNewWaypoint(self):
+        if self.ctx.state.next_waypoint_index is None:
+            return
+        if self.ctx.state.path is None:
+            return
+
+        index = min(self.ctx.state.next_waypoint_index +
+                    5, len(self.ctx.state.path)-1)
+
+        if (index == -1):
+            return
+        if self.ctx.state.path[index] is None:
+            return
+
+        self.waypoint = self.ctx.state.path[self.ctx.state.next_waypoint_index+5]
+
+    async def run(self):
+        while True:
+            await self.ctx.pose_update.wait(timeout=MAX_WAIT)
+            await self.update_motor_control()
+
     def update_waypoint(self, waypoint: Vec2 | None):
         self.waypoint = waypoint
 
     async def update_motor_control(self):
-        #print("Update Motor called :)")
         # TODO: Calculate the required motor speeds to reach the next waypoint
         if (self.ctx.state.reactive_control):
-            #print("You doing good baby")
             (arrived, vLC, vRC) = self.controlWithDistance()
         else:
             (arrived, vLC, vRC) = self.controlPosition()
 
-        #print(vLC, vRC)
+        if arrived:
+            if self.ctx.state.next_waypoint_index is None or self.ctx.state.path is None:
+                return
+
+            self.waypoint = self.ctx.state.path[self.ctx.state.next_waypoint_index]
+            self.ctx.state.next_waypoint_index += 1
+
         await self.ctx.node.set_variables(
             {"motor.left.target": [vLC], "motor.right.target": [vRC]})
-
-        #raise Exception("Not implemented!")
 
     def controlPosition(self):  # include T somewhere
         currentposition = np.array(
@@ -67,12 +92,10 @@ class MotionControl(BackgroundTask):
 
     def controlWithDistance(self):
         distances = np.array(self.ctx.state.relative_distances)
-        #print("Coucou :)", distances)
         vForward = 20
         vAngle = -3
 
         if (distances[0] == -1):
-            # print(self.times)
             self.times = self.times+1*self.factor
             if (self.times < 40):
                 vAngle = 0
@@ -83,17 +106,22 @@ class MotionControl(BackgroundTask):
             else:
                 vAngle = -15
 
-        if (distances[4] != -1 and distances[4] < 4):
-            #print("prox droite ")
-            pass
+        # the higher the less priority you have
+        newD = np.array([distances[1], distances[3], distances[4]])
+        idx = newD.argmin()
+        if (newD[idx] != -1 and newD[idx] < 4):
+            self.times = 0
+            vAngle = -(newD[idx]-4)*10
+            vForward = (newD[idx]-4)*20
 
+        # 2nd priority, if smt in left sensor
         if (distances[0] != -1):
             self.times = 0
             if (distances[0] < 6):
                 vAngle = -(distances[0]-6)*5
                 if (distances[0] < 4):
                     vForward = (distances[0]-4)*20
-
+        # 1st priority, if sens smt in front stop
         if (distances[2] != -1 and distances[2] < 5):
             self.times = 0
             vAngle = -(distances[2]-5)*10

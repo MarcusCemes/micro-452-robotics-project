@@ -21,14 +21,15 @@ class BigBrain:
 
         # create_task(self.do_pings())
         # create_task(self.do_start_stop())
+        # create_task(self.update_scene())
 
         with Filtering(self.ctx) as filtering, \
                 MotionControl(self.ctx) as motion_control, \
                 GlobalNavigation(self.ctx) as global_nav, \
-                LocalNavigation(self.ctx) as local_nav:
+                LocalNavigation(self.ctx, motion_control) as local_nav:
 
             await self.loop(
-                Vision(self.ctx, False),
+                Vision(self.ctx, external=False, live=False),
                 filtering,
                 motion_control,
                 global_nav,
@@ -53,6 +54,11 @@ class BigBrain:
         except Exception:
             pass
 
+    async def update_scene(self):
+        while True:
+            self.ctx.scene_update.trigger()
+            await sleep(1)
+
     async def loop(
         self,
         vision: Vision,
@@ -61,6 +67,17 @@ class BigBrain:
         global_nav: GlobalNavigation,
         local_nav: LocalNavigation,
     ):
+        vision.calibrate()
+
+        while True:
+            obstacles, posImg, posPhy = vision.update()
+
+            # update filtering with camera reading
+            #filtering.update((posPhy[0], posPhy[1]), posPhy[2])
+
+            self.ctx.state.obstacles = obstacles.tolist()
+            self.ctx.state.changed()
+            await sleep(1)
 
         while True:
 

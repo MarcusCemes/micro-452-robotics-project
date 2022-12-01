@@ -29,7 +29,7 @@ class State:
     # == Global Navigation == #
     path: list[Vec2] | None = None
     next_waypoint_index: int | None = None
-    obstacles: list[Coords] = field(default_factory=list)
+    obstacles: list[list[int]] = field(default_factory=list)
     extra_obstacles: list[Obstacle] = field(default_factory=list)
     computation_time: float | None = None
 
@@ -39,7 +39,7 @@ class State:
 
     # == Local Navigation == #
     prox_sensors: list[float] | None = None
-    relative_distances: list[Coords] = field(default_factory=list)
+    relative_distances: list[float] = field(default_factory=list)
     reactive_control: bool | None = None
 
     def changed(self):

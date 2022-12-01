@@ -1,6 +1,9 @@
 import math
+from typing import Any
 
 import numpy as np
+from numpy import typing as npt
+
 
 from app.utils.console import *
 
@@ -47,35 +50,35 @@ class ExtendedKalmanFilter(object):
 
         # State Vector
         # x, y, orientation
-        self.E = np.matrix([[pose[0]], [pose[1]], [orientation]])
+        self.E = np.array([[pose[0]], [pose[1]], [orientation]], dtype="f")
 
         # transition matrix
-        self.A = np.matrix([[1, 0, 0],
-                            [0, 1, 0],
-                            [0, 0, 1]])
+        self.A = np.array([[1, 0, 0],
+                           [0, 1, 0],
+                           [0, 0, 1]], dtype="f")
 
-        self.B = np.matrix([[math.cos(self.E[2])*self.dt, 0],
+        self.B = np.array([[math.cos(self.E[2])*self.dt, 0],
                            [math.sin(self.E[2])*self.dt, 0],
-                           [0, self.dt]])
+                           [0, self.dt]], dtype="f")
 
-        self.U = np.matrix([0, 0])
+        self.U = np.array([0, 0])
 
-        self.G = np.matrix([[1, 0, -math.sin(self.E[2])*self.dt*self.U[0]],
-                            [0, 1, math.cos(self.E[2])*self.dt*self.U[0]],
-                            [0, 0, 1]])
+        self.G = np.array([[1, 0, -math.sin(self.E[2])*self.dt*self.U[0]],
+                           [0, 1, math.cos(self.E[2])*self.dt*self.U[0]],
+                           [0, 0, 1]], dtype="f")
 
         # Matrice d'observation, on observe que x et y
-        self.H = np.matrix([[1, 0, 0],
-                            [0, 1, 0],
-                            [0, 0, 1]])
+        self.H = np.array([[1, 0, 0],
+                           [0, 1, 0],
+                           [0, 0, 1]], dtype="f")
 
-        self.Q = np.matrix([[1, 0, 0],
-                            [0, 1, 0],
-                            [0, 0, 1]])  # valeurs uniquement sur la diag, les bruits sont indépendants
+        self.Q = np.array([[1, 0, 0],
+                           [0, 1, 0],
+                           [0, 0, 1]], dtype="f")  # valeurs uniquement sur la diag, les bruits sont indépendants
 
-        self.R = np.matrix([[1, 0, 0],
-                            [0, 1, 0],
-                            [0, 0, 1]])  # bruit de la caméra, peut-être donné par le constructeur.  sinon tuner
+        self.R = np.array([[1, 0, 0],
+                           [0, 1, 0],
+                           [0, 0, 1]], dtype="f")  # bruit de la caméra, peut-être donné par le constructeur.  sinon tuner
 
         self.P = np.eye(self.A.shape[1])
 
@@ -83,9 +86,9 @@ class ExtendedKalmanFilter(object):
         """ 
         Updates B matrix
         """
-        self.B = np.matrix([[math.cos(self.E[2])*dt, 0],
+        self.B = np.array([[math.cos(self.E[2])*dt, 0],
                            [math.sin(self.E[2])*dt, 0],
-                           [0, dt]])
+                           [0, dt]], dtype="f")
 
     def update_U(self, speedL, speedR):
         """ 
@@ -104,9 +107,9 @@ class ExtendedKalmanFilter(object):
         Updates G matrix
         """
 
-        self.G = np.matrix([[1, 0, -math.sin(self.E[2])*self.dt*self.U[0]],
-                            [0, 1, math.cos(self.E[2])*self.dt*self.U[0]],
-                            [0, 0, 1]])
+        self.G = np.array([[1, 0, -math.sin(self.E[2])*self.dt*self.U[0]],
+                           [0, 1, math.cos(self.E[2])*self.dt*self.U[0]],
+                           [0, 0, 1]], dtype="f")
 
     def predict_ekf(self, speedL, speedR, dt):
         """ 
@@ -143,7 +146,8 @@ class ExtendedKalmanFilter(object):
         K = np.dot(np.dot(self.P, self.H.T), np.linalg.inv(S))
 
         # Correction / innovation
-        self.E = np.round(self.E+np.dot(K, (z-np.dot(self.H, self.E))))
+        self.E: Any = np.round(
+            self.E+np.dot(K, (z-np.dot(self.H, self.E))))
         I = np.eye(self.H.shape[1])
         self.P = (I-(K*self.H))*self.P
 

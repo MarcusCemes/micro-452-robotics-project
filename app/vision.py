@@ -7,11 +7,12 @@ from math import pi
 
 from app.config import PIXELS_PER_CM, TABLE_LEN, LM_FRONT, LM_BACK, SAFE_DISTANCE, FINAL_SIZE
 from app.context import Context
+from app.utils.console import *
 
 
 class Vision:
 
-    def __init__(self, ctx: Context, external=True, live=True):
+    def __init__(self, ctx: Context, external=True, live=False):
         self.ctx = ctx
 
         # Create a VideoCapture object and read from input file
@@ -37,7 +38,7 @@ class Vision:
         self.__get_frame()    # init frame
         self.__create_border_filter()   # init border detection filter
 
-    def __get_frame(self, saved_frame='frame.jpeg'):
+    def __get_frame(self, saved_frame='assets/test_frame_01.jpg'):
         if self.live == True:
             ret, self.frame = self.cap.read()
             if ret == False:
@@ -52,21 +53,27 @@ class Vision:
         pts_dst = np.array([[0, 0], [self.table_len-1, 0],
                            [self.table_len-1, self.table_len-1], [0, self.table_len-1]])
 
-        self.__get_frame()
+        if not self.live:
+            self.pts_src = np.array(
+                [[80, 9], [525, 14], [518, 464], [76, 460]])
+        else:
+            debug("Showing window")
+            self.__get_frame()
 
-        while (1):
-            cv2.imshow('Frame', self.frame)
-            key = cv2.waitKey(5)
-            if key == ord('s'):
-                break
-            if key == ord('n'):
-                self.__get_frame()
+            while (1):
+                cv2.imshow('Frame', self.frame)
+                key = cv2.waitKey(5)
+                if key == ord('s'):
+                    break
+                if key == ord('n'):
+                    self.__get_frame()
 
-        cv2.imshow("frame", self.frame)
-        cv2.setMouseCallback("frame", self.__mouse_callback)
-        while self.n_points < 4:
-            cv2.waitKey(10)
-        cv2.destroyWindow('frame')
+            cv2.imshow("frame", self.frame)
+            cv2.setMouseCallback("frame", self.__mouse_callback)
+            while self.n_points < 4:
+                cv2.waitKey(10)
+            cv2.destroyWindow('frame')
+            cv2.destroyWindow('Frame')
 
         # Calculate Homography
         self.h, _ = cv2.findHomography(self.pts_src, pts_dst)
@@ -84,7 +91,7 @@ class Vision:
         self.__focus_table()
         self.__final_table()
         self.__robot_coordinates()
-        return self.table64, (self.final_x, self.final_y, self.theta), (self.robot_x, self.robot_y, self.theta)
+        return self.table64, (self.final_x, self.final_y, self.theta), ((self.final_x/FINAL_SIZE)*TABLE_LEN, (self.final_y/FINAL_SIZE)*TABLE_LEN, self.theta)
 
     def __focus_table(self):
         self.table = cv2.warpPerspective(
@@ -112,8 +119,8 @@ class Vision:
     def __final_table(self):
         self.__add_borders()
         # send this information o the next module
-        self.table64 = cv2.flip(cv2.resize(self.obstacles, dsize=(
-            FINAL_SIZE, FINAL_SIZE)), 0)  # changing the referencial on yy
+        self.table64 = np.clip(cv2.flip(cv2.resize(self.obstacles, dsize=(
+            FINAL_SIZE, FINAL_SIZE)), 0), 0, 1)  # changing the referencial on yy
 
     def __add_borders(self):
         # add borders

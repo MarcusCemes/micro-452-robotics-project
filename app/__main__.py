@@ -1,22 +1,30 @@
 from asyncio import create_task, run, sleep
 
+import numpy as np
 from rich.padding import Padding
 from rich.panel import Panel
 from tdmclient import ClientAsync
 
 from app.big_brain import BigBrain
+from app.config import DEBUG, PROCESS_MSG_INTERVAL, RAISE_DEPRECATION_WARNINGS
 from app.context import Context
 from app.parallel import Pool
 from app.server import Server
 from app.state import State
 from app.utils.console import *
 
+# np.warnings.filterwarnings('error', category=np.VisibleDeprecationWarning)
+
 
 def main():
     print_banner()
 
+    if RAISE_DEPRECATION_WARNINGS:
+        np.warnings.filterwarnings(  # type: ignore
+            "error", category=np.VisibleDeprecationWarning)
+
     try:
-        run(connect())
+        run(init(), debug=DEBUG)
 
     except KeyboardInterrupt:
         warning("Interrupted by user")
@@ -41,7 +49,7 @@ def print_banner():
         ), justify="left")
 
 
-async def connect():
+async def init():
     status = console.status(
         "Connecting to Thymio driver", spinner_style="cyan")
 
@@ -68,7 +76,8 @@ async def connect():
                     ctx = Context(node, pool, State())
 
                     async with Server(ctx):
-                        await BigBrain(ctx).start_thinking()
+                        brain = BigBrain(ctx)
+                        await brain.start_thinking()
 
     except ConnectionRefusedError:
         warning("Thymio driver connection refused")
@@ -85,7 +94,7 @@ async def process_messages(client: ClientAsync):
     try:
         while True:
             client.process_waiting_messages()
-            await sleep(0.05)
+            await sleep(PROCESS_MSG_INTERVAL)
 
     except Exception:
         pass

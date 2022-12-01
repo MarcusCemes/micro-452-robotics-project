@@ -1,5 +1,5 @@
 from asyncio import create_task
-from traceback import print_exception
+from traceback import print_exc
 from typing import Any
 
 from aiohttp import WSMsgType
@@ -53,9 +53,9 @@ async def websocket_handler(request: Request):
     except ConnectionResetError:
         pass
 
-    except Exception as e:
+    except Exception:
         error("[server] Error sending initial state!")
-        print_exception(e)
+        print_exc()
         print(ctx.state)
 
         print("type of relative_distances", type(
@@ -76,9 +76,9 @@ async def handle_tx(ws: WebSocketResponse, state: State):
     except ConnectionResetError:
         pass
 
-    except Exception as e:
+    except Exception:
         error("[server] Error sending patch!")
-        print_exception(e)
+        print_exc()
         print(state)
 
 
