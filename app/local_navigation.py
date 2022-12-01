@@ -103,20 +103,20 @@ class LocalNavigation(ThymioEventProcessor):
     def getDistanceArray(self):
         proxSensor = np.array(self.ctx.state.prox_sensors)
         proxDistance = []
-        proxDistance = proxDistance +
-        [self.getDistance(proxSensor[0], SensorsValuesFront)]
-        proxDistance = proxDistance +
-        [self.getDistance(proxSensor[1], SensorsValuesDiag)]
-        proxDistance = proxDistance +
-        [self.getDistance(proxSensor[2], SensorsValuesFront)]
-        proxDistance = proxDistance +
-        [self.getDistance(proxSensor[3], SensorsValuesDiag)]
-        proxDistance = proxDistance +
-        [self.getDistance(proxSensor[4], SensorsValuesFront)]
-        proxDistance = proxDistance +
-        [self.getDistance(proxSensor[5], SensorsValuesBack)]
-        proxDistance = proxDistance +
-        [self.getDistance(proxSensor[6], SensorsValuesBack)]
+        proxDistance = proxDistance + \
+            [self.getDistance(proxSensor[0], SensorsValuesFront)]
+        proxDistance = proxDistance + \
+            [self.getDistance(proxSensor[1], SensorsValuesDiag)]
+        proxDistance = proxDistance + \
+            [self.getDistance(proxSensor[2], SensorsValuesFront)]
+        proxDistance = proxDistance + \
+            [self.getDistance(proxSensor[3], SensorsValuesDiag)]
+        proxDistance = proxDistance + \
+            [self.getDistance(proxSensor[4], SensorsValuesFront)]
+        proxDistance = proxDistance + \
+            [self.getDistance(proxSensor[5], SensorsValuesBack)]
+        proxDistance = proxDistance + \
+            [self.getDistance(proxSensor[6], SensorsValuesBack)]
         return np.array(proxDistance)
 
     def getWallRelative(self):

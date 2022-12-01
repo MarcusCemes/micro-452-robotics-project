@@ -9,15 +9,13 @@ from app.utils.console import *
 class ThymioEventProcessor:
     def __init__(self, ctx: Context):
         self.ctx = ctx
-        self._task = None
 
     def __enter__(self):
         self.ctx.node.add_variables_changed_listener(
             self._on_variables_changed)
 
         run = getattr(self, "run", None)
-        if callable(run):
-            self._task = create_task(run())
+        self._task = create_task(run()) if callable(run) else None
 
         return self
 
