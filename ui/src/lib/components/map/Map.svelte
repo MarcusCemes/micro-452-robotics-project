@@ -7,12 +7,14 @@
     import Obstacle from "./Obstacle.svelte";
     import Thymio from "./Thymio.svelte";
 
-    let map: HTMLDivElement;
-    let canvas: HTMLCanvasElement;
+    let map: HTMLDivElement | null = null;
+    let canvas: HTMLCanvasElement | null = null;
     let action: "start" | "end" | "obstacle" | null = null;
 
     let obstacleStart: Vec2 | null = null;
     let mousePosition: Vec2 | null = null;
+
+    let drawNodes = false;
 
     $: e = $state;
     $: console.log(e);
@@ -44,7 +46,7 @@
         .join(",");
 
     $: obstacles = e.state.obstacles as [number, number][] | undefined;
-    $: if (obstacles) drawObstacles(obstacles, canvas);
+    $: if (canvas && obstacles) drawCanvas(canvas, obstacles, subdivisions);
 
     $: extraObstacles = e.state.extra_obstacles as
         | [[number, number], [number, number]][]
@@ -53,29 +55,46 @@
     $: extraObstacleVectors =
         extraObstacles?.map(([a, b]) => [Vec2.parse(a), Vec2.parse(b)]) ?? [];
 
-    function drawObstacles(obstacles: number[][], canvas?: HTMLCanvasElement) {
-        if (!canvas) return;
-
+    function drawCanvas(
+        canvas: HTMLCanvasElement,
+        obstacles: number[][],
+        subdivisions: number
+    ) {
         const ctx = canvas.getContext("2d");
         if (!ctx) return;
 
-        const subdivisions =
-            ($state.state.subdivisions as number | undefined) || 64;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
 
         ctx.save();
+
+        const sizeX = Math.ceil(canvas.width / subdivisions);
+        const sizeY = Math.ceil(canvas.height / subdivisions);
+
         ctx.fillStyle = "black";
 
-        ctx.scale(
-            $scale.mapSize.x / subdivisions,
-            $scale.mapSize.y / subdivisions
-        );
+        for (let i = 0; i < subdivisions; i++) {
+            for (let j = 0; j < subdivisions; j++) {
+                if (obstacles[subdivisions - i - 1][j] === 1) {
+                    ctx.fillStyle = "black";
+                    ctx.fillRect(
+                        Math.floor(j * sizeX),
+                        Math.floor(i * sizeY),
+                        sizeX,
+                        sizeY
+                    );
+                }
 
-        for (let x = 0; x < obstacles.length; x++) {
-            const row = obstacles[x];
-            for (let y = 0; y < row.length; y++) {
-                const mappedY = row.length - y - 1;
-                if (row[y] === 1) {
-                    ctx.fillRect(x, mappedY, 1, 1);
+                if (drawNodes) {
+                    ctx.fillStyle = "orange";
+                    ctx.beginPath();
+                    ctx.arc(
+                        (j + 0.5) * sizeX,
+                        (i + 0.5) * sizeY,
+                        1,
+                        0,
+                        2 * Math.PI
+                    );
+                    ctx.fill();
                 }
             }
         }
@@ -129,7 +148,7 @@
     }
 
     function getPosition(event: MouseEvent) {
-        const rect = map.getBoundingClientRect();
+        const rect = map!.getBoundingClientRect();
         const x = event.clientX - rect.left;
         const y = event.clientY - rect.top;
         return new Vec2(x, y);
@@ -165,13 +184,13 @@
     on:mouseleave={onMouseLeave}
     bind:clientWidth={$mapSize.x}
     bind:clientHeight={$mapSize.y}
-    class="relative w-96 h-96 border border-gray-300 rounded bg-white"
+    class="relative w-96 h-96 bg-white"
 >
     <canvas
         bind:this={canvas}
+        class="absolute top-0 left-0"
         width={$mapSize.x}
         height={$mapSize.y}
-        class="absolute top-0 left-0"
     />
 
     {#each extraObstacleVectors as [from, to]}

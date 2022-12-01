@@ -9,6 +9,8 @@ from app.config import PIXELS_PER_CM, TABLE_LEN, LM_FRONT, LM_BACK, SAFE_DISTANC
 from app.context import Context
 from app.utils.console import *
 
+THRESHOLD = 128
+
 
 class Vision:
 
@@ -57,7 +59,6 @@ class Vision:
             self.pts_src = np.array(
                 [[80, 9], [525, 14], [518, 464], [76, 460]])
         else:
-            debug("Showing window")
             self.__get_frame()
 
             while (1):
@@ -119,8 +120,11 @@ class Vision:
     def __final_table(self):
         self.__add_borders()
         # send this information o the next module
-        self.table64 = np.clip(cv2.flip(cv2.resize(self.obstacles, dsize=(
-            FINAL_SIZE, FINAL_SIZE)), 0), 0, 1)  # changing the referencial on yy
+        self.table64 = cv2.flip(cv2.resize(self.obstacles, dsize=(
+            FINAL_SIZE, FINAL_SIZE)), 0)  # changing the referencial on yy
+
+        # Clip values using a threshold value
+        self.table64 = np.where(self.table64 > THRESHOLD, 1, 0)
 
     def __add_borders(self):
         # add borders

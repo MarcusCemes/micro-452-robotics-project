@@ -98,8 +98,6 @@ class Dijkstra:
     def apply_obstacles(self, obstacles: list[list[int]]):
         for y, row in enumerate(obstacles):
             for x, value in enumerate(row):
-                if x == 14 and y == 32:
-                    print(f"x = {x}, y = {y}, value = {value}")
                 coords = (x, y)
                 visitable = not bool(value)
                 if not visitable and self.graph.coords_in_bounds(coords):
@@ -190,8 +188,8 @@ class Graph:
 
     def get_coords(self, index: Coords) -> Vec2:
         (x, y) = index
-        x *= self.size[0] / float(self.subdivisions)
-        y *= self.size[1] / float(self.subdivisions)
+        x = (x + 0.5) * self.size[0] / float(self.subdivisions)
+        y = (y + 0.5) * self.size[1] / float(self.subdivisions)
         return (x, y)
 
     def coords_in_bounds(self, coords: Coords) -> bool:
