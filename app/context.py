@@ -10,6 +10,7 @@ from app.utils.types import Signal
 @dataclass
 class Context:
     node: ClientAsyncCacheNode
+    secondary_node: ClientAsyncCacheNode
     pool: Pool
     state: State
     scene_update: Signal = Signal()

@@ -50,6 +50,8 @@ class BigBrain:
                 # await sleep(2)
                 await self.ctx.node.set_variables(
                     {"motor.left.target": [100], "motor.right.target": [100]})
+                await self.ctx.secondary_node.set_variables(
+                    {"motor.left.target": [-100], "motor.right.target": [100]})
 
         except Exception:
             pass
