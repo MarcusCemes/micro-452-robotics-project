@@ -45,6 +45,7 @@ export enum ConnectionStatus {
     Connecting,
     Connected,
     Disconnected,
+    Failed,
 }
 
 /* == Functions == */
@@ -109,16 +110,23 @@ export const connectionStatus = derived(
         const openHandler = () => set(ConnectionStatus.Connected);
         const closeHandler = () => set(ConnectionStatus.Disconnected);
 
+        const errorHandler = () => {
+            $socket.removeEventListener("close", closeHandler);
+            set(ConnectionStatus.Failed);
+        };
+
         switch ($socket.readyState) {
             case WebSocket.CONNECTING:
                 set(ConnectionStatus.Connecting);
                 $socket.addEventListener("open", openHandler);
                 $socket.addEventListener("close", closeHandler);
+                $socket.addEventListener("error", errorHandler);
                 break;
 
             case WebSocket.OPEN:
                 set(ConnectionStatus.Connected);
                 $socket.addEventListener("close", closeHandler);
+                $socket.addEventListener("error", errorHandler);
                 break;
 
             default:
@@ -129,6 +137,7 @@ export const connectionStatus = derived(
         return () => {
             $socket.removeEventListener("open", openHandler);
             $socket.removeEventListener("close", closeHandler);
+            $socket.addEventListener("error", errorHandler);
         };
     },
     ConnectionStatus.Disconnected

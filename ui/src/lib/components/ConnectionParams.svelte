@@ -11,6 +11,11 @@
     $: connected = status === ConnectionStatus.Connected;
     $: buttonText = connected ? "Disconnect" : "Connect";
 
+    $: disabled = [
+        ConnectionStatus.Connecting,
+        ConnectionStatus.Connected,
+    ].includes(status);
+
     function onClick() {
         if (connected) disconnect();
         else reconnect();
@@ -21,7 +26,7 @@
     <input
         bind:value={$socketUrl}
         class="mr-2 px-2 py-1 border rounded"
-        disabled={!!status}
+        {disabled}
     />
 
     <button
