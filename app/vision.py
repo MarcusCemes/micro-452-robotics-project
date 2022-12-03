@@ -1,15 +1,16 @@
-import cv2
-import matplotlib.pyplot as plt
-import time
-import numpy as np
-from scipy import signal
 from math import pi
 
-from app.config import PIXELS_PER_CM, TABLE_LEN, LM_FRONT, LM_BACK, SAFE_DISTANCE, FINAL_SIZE
+import cv2
+import numpy as np
+from scipy.signal import convolve2d
+
+from app.config import *
 from app.context import Context
 from app.utils.console import *
 
 THRESHOLD = 128
+
+CALIBRATE_NAMED_WINDOW = "Calibrate camera perspective"
 
 
 class Vision:
@@ -61,20 +62,26 @@ class Vision:
         else:
             self.__get_frame()
 
-            while (1):
-                cv2.imshow('Frame', self.frame)
-                key = cv2.waitKey(5)
-                if key == ord('s'):
-                    break
-                if key == ord('n'):
-                    self.__get_frame()
+            info("Select 4 points to correct perspective (TL, TR, BR, BL)")
+            info("Press N to take a new frame, or Q to exit")
 
-            cv2.imshow("frame", self.frame)
-            cv2.setMouseCallback("frame", self.__mouse_callback)
+            cv2.imshow(CALIBRATE_NAMED_WINDOW, self.frame)
+            cv2.setMouseCallback(CALIBRATE_NAMED_WINDOW, self.__mouse_callback)
+
             while self.n_points < 4:
-                cv2.waitKey(10)
-            cv2.destroyWindow('frame')
-            cv2.destroyWindow('Frame')
+                key = cv2.waitKey(1)
+
+                if key == ord("q"):
+                    exit(0)
+
+                elif key == ord("n"):
+                    self.pts_src = np.zeros((4, 2), np.int32)
+                    self.n_points = 0
+
+                    self.__get_frame()
+                    cv2.imshow(CALIBRATE_NAMED_WINDOW, self.frame)
+
+            cv2.destroyWindow(CALIBRATE_NAMED_WINDOW)
 
         # Calculate Homography
         self.h, _ = cv2.findHomography(self.pts_src, pts_dst)
@@ -118,7 +125,7 @@ class Vision:
                     self.borders[x, y] = 1
 
     def __final_table(self):
-        self.__add_borders()
+        # self.__add_borders()
         # send this information o the next module
         self.table64 = cv2.flip(cv2.resize(self.obstacles, dsize=(
             FINAL_SIZE, FINAL_SIZE)), 0)  # changing the referencial on yy
@@ -128,7 +135,7 @@ class Vision:
 
     def __add_borders(self):
         # add borders
-        self.obstacles_borders = signal.convolve2d(
+        self.obstacles_borders = convolve2d(
             self.obstacles, self.borders, mode='same', boundary='fill', fillvalue=0)
         self.obstacles = (255*(self.obstacles_borders > 0)).astype(np.uint8)
 
@@ -146,7 +153,7 @@ class Vision:
             self.table, self.color_front[0], self.color_front[1])
         filter_front = np.ones(
             (int(LM_FRONT*PIXELS_PER_CM), int(LM_FRONT*PIXELS_PER_CM)))
-        self.center_front = signal.convolve2d(
+        self.center_front = convolve2d(
             robot_front, filter_front, mode='same', boundary='fill', fillvalue=0)
         self.center_front = (np.argmax(self.center_front) % self.center_front.shape[1], np.argmax(
             self.center_front)//self.center_front.shape[1])  # (x,y)
@@ -156,7 +163,7 @@ class Vision:
             self.table, self.color_back[0], self.color_back[1])
         filter_back = np.ones(
             (int(LM_BACK*PIXELS_PER_CM), int(LM_BACK*PIXELS_PER_CM)))
-        self.center_back = signal.convolve2d(
+        self.center_back = convolve2d(
             robot_back, filter_back, mode='same', boundary='fill', fillvalue=0)
         self.center_back = (np.argmax(self.center_back) % self.center_back.shape[1], np.argmax(
             self.center_back)//self.center_back.shape[1])

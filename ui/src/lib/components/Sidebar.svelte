@@ -10,7 +10,7 @@
         École Polytéchnique Fédérale de Laussane
     </div>
 
-    <ConnectionParams />
     <ConnectionIndicator />
+    <ConnectionParams />
     <State />
 </div>

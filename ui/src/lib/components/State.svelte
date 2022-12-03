@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { state } from "$lib/connection";
+    import { server } from "$lib/connection";
 
-    $: stateText = JSON.stringify(filter($state.state), null, 2);
+    $: stateText = JSON.stringify(filter($server.state), null, 2);
 
     function filter(state: any) {
         const newState = { ...state };
@@ -16,6 +16,6 @@
     }
 </script>
 
-<h2 class="mb-2 text-xl font-bold">State</h2>
+<h2 class="mt-8 mb-2 pl-2 text-2xl font-bold">State</h2>
 <pre
-    class="max-h-96 p-2 bg-gray-100 rounded font-mono overflow-x-auto overflow-y-auto  text-sm">{stateText}</pre>
+    class="max-h-96 p-2 bg-gray-100 rounded font-mono overflow-x-auto overflow-y-auto text-sm">{stateText}</pre>

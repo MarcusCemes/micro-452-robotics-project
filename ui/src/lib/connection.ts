@@ -6,10 +6,38 @@ import {
     type Writable,
 } from "svelte/store";
 
+/* == Constants == */
+
 const HISTORY = 16;
 const SERVER_URL = "ws://localhost:8080/ws";
 
-const tx = new EventTarget();
+/* == Types == */
+
+type Tuple2<T = number> = [T, T];
+type ExtraObstacle = Tuple2<Tuple2>;
+
+export interface State {
+    position: Tuple2 | null;
+    orientation: number | null;
+
+    start: Tuple2 | null;
+    end: Tuple2 | null;
+
+    path: Tuple2[] | null;
+    next_waypoint_index: number | null;
+    obstacles: number[][];
+    extra_obstacles: ExtraObstacle[];
+    computation_time: number | null;
+
+    subdivisions: number;
+    physical_size: Tuple2;
+
+    prox_sensors: number[];
+    relative_distances: number[];
+    reactive_control: boolean | null;
+}
+
+/* == Connection Status == */
 
 export const connectionSwitch = writable<number | false>(false);
 
@@ -18,6 +46,10 @@ export enum ConnectionStatus {
     Connected,
     Disconnected,
 }
+
+/* == Functions == */
+
+const tx = new EventTarget();
 
 export function connect() {
     connectionSwitch.update((x) => x || 1);
@@ -30,6 +62,12 @@ export function reconnect() {
 export function disconnect() {
     connectionSwitch.set(false);
 }
+
+export function send(type: string, data: unknown) {
+    tx.dispatchEvent(new CustomEvent("message", { detail: { type, data } }));
+}
+
+/* == Stores == */
 
 export const socketUrl = writable(SERVER_URL);
 
@@ -118,13 +156,13 @@ export const events = derived<
     null
 );
 
-export const state = derived(
+export const server = derived(
     socket,
     (ws, set) => {
         if (!ws) return;
 
         let msgs: unknown[] = [];
-        let state: Record<string, unknown> = {};
+        let state: State | null = null;
 
         const handler = (e: MessageEvent) => {
             const { type, data } = JSON.parse(e.data);
@@ -135,11 +173,20 @@ export const state = derived(
                     break;
 
                 case "state":
-                    state = data as Record<string, unknown>;
+                    state = data as State;
                     break;
 
                 case "patch":
-                    state = { ...state, ...(data as Record<string, unknown>) };
+                    if (!state) {
+                        console.error("Received patch before state!");
+                        return;
+                    }
+
+                    state = {
+                        ...state,
+                        ...(data as Partial<State>),
+                    };
+
                     break;
             }
 
@@ -152,12 +199,10 @@ export const state = derived(
             ws.removeEventListener("message", handler);
         };
     },
-    { msgs: [], state: {} } as {
+    { msgs: [], state: null } as {
         msgs: unknown[];
-        state: Record<string, unknown>;
+        state: State | null;
     }
 );
 
-export function send(type: string, data: unknown) {
-    tx.dispatchEvent(new CustomEvent("message", { detail: { type, data } }));
-}
+export const state = derived(server, ($server) => $server.state, null);

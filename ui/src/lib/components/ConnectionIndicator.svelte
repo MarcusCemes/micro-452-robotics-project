@@ -7,25 +7,30 @@
 
     $: status = $connectionStatus;
 
+    $: pulse = [
+        ConnectionStatus.Connecting,
+        ConnectionStatus.Connected,
+    ].includes(status);
+
     $: shouldBeConnected = $connectionSwitch !== false;
 
     $: [colour, text] =
         status === ConnectionStatus.Connected
-            ? ["bg-green-500", "connected"]
+            ? ["bg-green-500", "Connected"]
             : status === ConnectionStatus.Connecting
-            ? ["bg-yellow-500", "connecting"]
+            ? ["bg-yellow-500", "Connecting"]
             : shouldBeConnected
-            ? ["bg-red-500", "failed"]
-            : ["bg-gray-500", "disconnected"];
+            ? ["bg-red-500", "Failed"]
+            : ["bg-gray-500", "Disconnected"];
 </script>
 
-<div class="p-2 flex items-center select-none">
+<div class="mb-4 flex justify-center items-center select-none">
     <div class={`relative w-2 h-2 rounded-full ${colour} transition-colors`}>
-        {#if status === ConnectionStatus.Connected}
+        {#if pulse}
             <div
                 class={`absolute inset-0 rounded-full animate-ping ${colour}`}
             />
         {/if}
     </div>
-    <span class="ml-2 text-lg font-medium">{text}</span>
+    <span class="ml-2 font-medium">{text}</span>
 </div>

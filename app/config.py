@@ -11,6 +11,9 @@ DIAMETER = 9.5
 DT_THRESHOLD = 0.6
 
 # == Vision == #
+USE_EXTERNAL_CAMERA = False
+USE_LIVE_CAMERA = True
+
 PIXELS_PER_CM = 5   # number of pixels in each cm
 TABLE_LEN = 58      # size in cm of the table
 LM_FRONT = 2.7      # diameter of the front landmark in cm

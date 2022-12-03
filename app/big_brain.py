@@ -1,7 +1,8 @@
 
 from asyncio import FIRST_COMPLETED, Event, create_task, sleep, wait
 
-from app.config import SLEEP_INTERVAL, SUBDIVISIONS
+from app.config import (SLEEP_INTERVAL, SUBDIVISIONS, USE_EXTERNAL_CAMERA,
+                        USE_LIVE_CAMERA)
 from app.context import Context
 from app.filtering import Filtering
 from app.global_navigation import GlobalNavigation
@@ -29,7 +30,8 @@ class BigBrain:
                 LocalNavigation(self.ctx, motion_control) as local_nav:
 
             await self.loop(
-                Vision(self.ctx, external=False, live=False),
+                Vision(self.ctx, external=USE_EXTERNAL_CAMERA,
+                       live=USE_LIVE_CAMERA),
                 filtering,
                 motion_control,
                 global_nav,
@@ -77,7 +79,8 @@ class BigBrain:
 
             self.ctx.state.obstacles = obstacles.tolist()
             self.ctx.state.changed()
-            await sleep(1)
+            self.ctx.scene_update.trigger()
+            await sleep(0.5)
 
         while True:
 

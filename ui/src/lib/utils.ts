@@ -31,8 +31,12 @@ export class Vec2 {
         return new Vec2(this.x - rhs.x, this.y - rhs.y);
     }
 
-    floor(): Vec2 {
-        return new Vec2(Math.floor(this.x), Math.floor(this.y));
+    map(fn: (v: Vec2) => Vec2): Vec2 {
+        return fn(this);
+    }
+
+    mapEach(fn: (v: number) => number): Vec2 {
+        return new Vec2(fn(this.x), fn(this.y));
     }
 
     toScreenSpace(scale: Scale, invertY = true): Vec2 {
@@ -51,7 +55,7 @@ export class Vec2 {
         return [this.x, this.y];
     }
 
-    static parse(coords?: unknown): Vec2 | undefined {
+    static tryParse(coords?: unknown): Vec2 | undefined {
         if (coords instanceof Array && coords.length >= 2)
             return new Vec2(coords[0], coords[1]);
     }

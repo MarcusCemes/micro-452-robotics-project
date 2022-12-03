@@ -1,25 +1,23 @@
 <script lang="ts">
     import {
-        connect,
-        connectionSwitch,
+        ConnectionStatus,
+        connectionStatus,
         disconnect,
+        reconnect,
         socketUrl,
     } from "$lib/connection";
 
-    $: status = $connectionSwitch;
-
-    $: buttonText = status ? "Disconnect" : "Connect";
+    $: status = $connectionStatus;
+    $: connected = status === ConnectionStatus.Connected;
+    $: buttonText = connected ? "Disconnect" : "Connect";
 
     function onClick() {
-        if (status) {
-            disconnect();
-        } else {
-            connect();
-        }
+        if (connected) disconnect();
+        else reconnect();
     }
 </script>
 
-<div class="flex items-center">
+<div class="flex justify-center items-center">
     <input
         bind:value={$socketUrl}
         class="mr-2 px-2 py-1 border rounded"
@@ -28,11 +26,12 @@
 
     <button
         on:click={onClick}
-        class={`px-2 py-1 border rounded text-white transition-colors duration-100 font-semibold ${
-            status
+        class={`px-2 py-1 border rounded text-white transition-colors duration-100 font-semibold disabled:bg-gray-300 disabled:text-gray-500 ${
+            connected
                 ? "bg-white text-black hover:bg-gray-100"
                 : "bg-blue-500 hover:bg-blue-400 active:bg-blue-600"
         }`}
+        disabled={status === ConnectionStatus.Connecting}
     >
         {buttonText}
     </button>

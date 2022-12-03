@@ -7,7 +7,7 @@ from aiohttp.web import (Application, AppRunner, Request, TCPSite,
                          WebSocketResponse, get)
 
 from app.context import Context
-from app.state import State, normalise_obstacle
+from app.state import ChangeListener, normalise_obstacle
 from app.utils.console import *
 
 
@@ -41,10 +41,12 @@ async def websocket_handler(request: Request):
     debug("[server] Client connected")
 
     try:
-        await ws.send_json({"type": "msg", "data": "Hi!"})
-        await ws.send_json({"type": "state", "data": ctx.state.__dict__})
+        listener = ctx.state.register_listener()
 
-        tx = create_task(handle_tx(ws, ctx.state))
+        await ws.send_json({"type": "msg", "data": "Hi!"})
+        await ws.send_json({"type": "state", "data": ctx.state.json()})
+
+        tx = create_task(handle_tx(ws, listener))
         await handle_rx(ws, ctx)
 
         tx.cancel()
@@ -67,11 +69,11 @@ async def websocket_handler(request: Request):
     return ws
 
 
-async def handle_tx(ws: WebSocketResponse, state: State):
+async def handle_tx(ws: WebSocketResponse, listener: ChangeListener):
     try:
         while True:
-            await state.wait_changed()
-            await ws.send_json({"type": "patch", "data": state.__dict__})
+            await listener.wait_for_patch()
+            await ws.send_json({"type": "patch", "data": listener.get_patch()})
 
     except ConnectionResetError:
         pass
@@ -79,7 +81,6 @@ async def handle_tx(ws: WebSocketResponse, state: State):
     except Exception:
         error("[server] Error sending patch!")
         print_exc()
-        print(state)
 
 
 async def handle_rx(ws: WebSocketResponse, ctx: Context):
@@ -96,19 +97,18 @@ async def handle_message(msg: Any, ws: WebSocketResponse, ctx: Context):
 
         case "set_start":
             ctx.state.start = msg["data"]
-            ctx.scene_update.trigger()
 
         case "set_end":
-            ctx.scene_update.trigger()
             ctx.state.end = msg["data"]
 
         case "add_obstacle":
             ctx.state.extra_obstacles.append(normalise_obstacle(msg["data"]))
-            ctx.scene_update.trigger()
+
+            # Reassign to trigger change event
+            ctx.state.extra_obstacles = ctx.state.extra_obstacles
 
         case "clear_obstacles":
             ctx.state.extra_obstacles = []
-            ctx.scene_update.trigger()
 
     ctx.state.changed()
     ctx.scene_update.trigger()

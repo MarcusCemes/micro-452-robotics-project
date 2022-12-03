@@ -2,14 +2,13 @@
     import { scale } from "$lib/stores";
     import { classes, type Vec2 } from "$lib/utils";
 
-    export let r: Vec2;
-
     export let ping = false;
+    export let position: Vec2;
 
     let className: string | undefined = undefined;
     export { className as class };
 
-    $: position = r.toScreenSpace($scale);
+    $: screenPosition = position.toScreenSpace($scale);
 </script>
 
 <div
@@ -17,8 +16,8 @@
         "absolute -top-2 -left-2 w-4 h-4 rounded-full transform",
         className
     )}
-    style:--tw-translate-x={`${position.x}px`}
-    style:--tw-translate-y={`${position.y}px`}
+    style:--tw-translate-x={`${screenPosition.x}px`}
+    style:--tw-translate-y={`${screenPosition.y}px`}
 >
     {#if ping}
         <div

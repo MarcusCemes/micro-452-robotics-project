@@ -1,5 +1,5 @@
-from asyncio import Event, wait_for, exceptions
-
+from asyncio import Event, wait_for
+from asyncio.exceptions import TimeoutError
 
 Coords = tuple[int, int]
 Vec2 = tuple[float, float]
@@ -24,5 +24,5 @@ class Signal:
         try:
             await wait_for(self._event.wait(), timeout)
 
-        except exceptions.TimeoutError:
+        except TimeoutError:
             pass

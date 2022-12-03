@@ -2,7 +2,7 @@ import { derived, writable, type Readable } from "svelte/store";
 import { state } from "./connection";
 import { Vec2 } from "./utils";
 
-const PHYSICAL_SIZE = 1;
+const DEFAULT_PHYSICAL_SIZE = 1;
 
 export interface Scale {
     mapSize: Vec2;
@@ -13,13 +13,13 @@ export const mapSize = writable(new Vec2(256, 256));
 
 export const scale: Readable<Scale> = derived(
     [state, mapSize],
-    ([$state, mapSize]) => {
-        const s = $state.state.physical_size as [number, number] | undefined;
+    ([$state, $mapSize]) => {
+        const size = $state?.physical_size;
 
-        const physicalSize = s
-            ? new Vec2(s[0], s[1])
-            : new Vec2(PHYSICAL_SIZE, PHYSICAL_SIZE);
+        const physicalSize = size
+            ? new Vec2(...size)
+            : new Vec2(DEFAULT_PHYSICAL_SIZE, DEFAULT_PHYSICAL_SIZE);
 
-        return { physicalSize, mapSize };
+        return { physicalSize, mapSize: $mapSize };
     }
 );

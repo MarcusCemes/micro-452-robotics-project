@@ -5,7 +5,7 @@ from typing import Generator
 
 from app.config import SUBDIVISIONS
 from app.context import Context
-from app.state import Obstacle
+from app.state import ExtraObstacle
 from app.utils.background_task import BackgroundTask
 from app.utils.types import Coords, Vec2
 
@@ -15,8 +15,8 @@ class PathFindingParams:
     start: Vec2
     end: Vec2
     obstacles: list[list[int]]
-    extra_obstacles: list[Obstacle]
-    subdivision: int
+    extra_obstacles: list[ExtraObstacle]
+    subdivisions: int
     physical_size: Vec2
 
 
@@ -47,7 +47,7 @@ class GlobalNavigation(BackgroundTask):
             extra_obstacles=self.ctx.state.extra_obstacles,
             physical_size=self.ctx.state.physical_size,
             start=self.ctx.state.start,
-            subdivision=self.ctx.state.subdivision
+            subdivisions=self.ctx.state.subdivisions
         )
 
         result = await self.ctx.pool.run(find_optimal_path, params)
@@ -103,12 +103,12 @@ class Dijkstra:
                 if not visitable and self.graph.coords_in_bounds(coords):
                     self.graph.node(coords).visitable = False
 
-    def apply_extra_obstacles(self, obstacles: list[Obstacle]):
+    def apply_extra_obstacles(self, obstacles: list[ExtraObstacle]):
         for obstacle in obstacles:
             for coords in self.obstacle_coords(obstacle):
                 self.graph.node(coords).visitable = False
 
-    def obstacle_coords(self, obstacle: Obstacle) -> Generator[Coords, None, None]:
+    def obstacle_coords(self, obstacle: ExtraObstacle) -> Generator[Coords, None, None]:
         (x1, y1) = self.graph.get_index(obstacle[0])
         (x2, y2) = self.graph.get_index(obstacle[1])
 
