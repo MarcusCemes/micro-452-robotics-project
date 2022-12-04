@@ -65,9 +65,9 @@ class Filtering(ThymioEventProcessor):
 
         #print("x = " + str(pose_x_est) + " y =" + str(pose_y_est))
 
-    def update(self, pose, orientation):  # from vision
+    def update(self, pose):  # from vision
         # filter recomputation and context update
-        z = np.array(pose, orientation)
+        z = np.array([pose])
         pose_x_est, pose_y_est, orientation_est = self.ekf.update_ekf(z)
         self.ctx.state.position = (pose_x_est, pose_y_est)
         self.ctx.state.orientation = orientation_est

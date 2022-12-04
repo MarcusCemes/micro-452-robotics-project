@@ -75,7 +75,7 @@ class BigBrain:
             obstacles, posImg, posPhy = vision.update()
 
             # update filtering with camera reading
-            #filtering.update((posPhy[0], posPhy[1]), posPhy[2])
+            filtering.update(posPhy)
 
             self.ctx.state.obstacles = obstacles.tolist()
             self.ctx.state.changed()
