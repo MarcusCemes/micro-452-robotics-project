@@ -6,20 +6,15 @@ const DEFAULT_PHYSICAL_SIZE = 1;
 
 export interface Scale {
     mapSize: Vec2;
-    physicalSize: Vec2;
+    physicalSize: number;
 }
 
 export const mapSize = writable(new Vec2(256, 256));
 
 export const scale: Readable<Scale> = derived(
     [state, mapSize],
-    ([$state, $mapSize]) => {
-        const size = $state?.physical_size;
-
-        const physicalSize = size
-            ? new Vec2(...size)
-            : new Vec2(DEFAULT_PHYSICAL_SIZE, DEFAULT_PHYSICAL_SIZE);
-
-        return { physicalSize, mapSize: $mapSize };
-    }
+    ([$state, $mapSize]) => ({
+        physicalSize: $state?.physical_size || DEFAULT_PHYSICAL_SIZE,
+        mapSize: $mapSize,
+    })
 );

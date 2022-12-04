@@ -13,8 +13,6 @@ from app.server import Server
 from app.state import State
 from app.utils.console import *
 
-# np.warnings.filterwarnings('error', category=np.VisibleDeprecationWarning)
-
 
 def main():
     print_banner()

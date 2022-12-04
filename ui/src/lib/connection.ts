@@ -11,10 +11,13 @@ import {
 const HISTORY = 16;
 const SERVER_URL = "ws://localhost:8080/ws";
 
+export const FILTERED_KEYS = ["path", "obstacles", "boundary_map", "nodes"];
+
 /* == Types == */
 
-type Tuple2<T = number> = [T, T];
-type ExtraObstacle = Tuple2<Tuple2>;
+export type Tuple2<T = number> = [T, T];
+export type ExtraObstacle = Tuple2<Tuple2>;
+export type Map = number[][];
 
 export interface State {
     position: Tuple2 | null;
@@ -25,12 +28,15 @@ export interface State {
 
     path: Tuple2[] | null;
     next_waypoint_index: number | null;
-    obstacles: number[][];
+    obstacles: Map;
     extra_obstacles: ExtraObstacle[];
+    boundary_map: Map | null;
     computation_time: number | null;
+    nodes: Tuple2[];
+    optimise: boolean;
 
     subdivisions: number;
-    physical_size: Tuple2;
+    physical_size: number;
 
     prox_sensors: number[];
     relative_distances: number[];

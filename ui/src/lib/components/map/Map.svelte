@@ -20,16 +20,21 @@
     let newObstacle: Vec2 | null = null;
     let mousePosition: Vec2 | null = null;
 
-    let nodes = false;
+    let drawNodes = false;
 
     $: scale = $scaleStore;
     $: status = $connectionStatus;
     $: state = $stateStore;
+    $: optimise = state?.optimise ?? false;
 
     $: disconnected = status !== ConnectionStatus.Connected;
 
     function clearObstacles() {
         send("clear_obstacles", null);
+    }
+
+    function onOptimise() {
+        send("optimise", !optimise);
     }
 
     function onClick(event: MouseEvent) {
@@ -69,8 +74,16 @@
         mousePosition = null;
     }
 
-    function onKeyPress(event: KeyboardEvent) {
-        if (event.key === "escape") {
+    function onKeyDown(event: KeyboardEvent) {
+        if (newObstacle && event.key === "Escape") {
+            event.preventDefault();
+            newObstacle = null;
+        }
+    }
+
+    function onContextMenu(event: MouseEvent) {
+        if (newObstacle) {
+            event.preventDefault();
             newObstacle = null;
         }
     }
@@ -83,9 +96,15 @@
     }
 </script>
 
-<svelte:window on:keypress={onKeyPress} />
+<svelte:window on:keydown={onKeyDown} />
 
-<Actions bind:action bind:nodes on:clear={clearObstacles} />
+<Actions
+    bind:action
+    bind:drawNodes
+    {optimise}
+    on:clear={clearObstacles}
+    on:optimise={onOptimise}
+/>
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->
 <div
@@ -93,13 +112,14 @@
     on:click={onClick}
     on:mousemove={onMouseMove}
     on:mouseleave={onMouseLeave}
+    on:contextmenu={onContextMenu}
     bind:clientWidth={$mapSize.x}
     bind:clientHeight={$mapSize.y}
-    class="relative w-96 h-96 bg-white ring-1 ring-gray-200 rounded overflow-hidden shadow-2xl transition"
+    class="relative w-96 h-96 bg-white ring-1 ring-gray-200 overflow-hidden shadow-2xl transition"
     class:ring-gray-300={!disconnected}
 >
     {#if state}
-        <MapView {nodes} {scale} {state} />
+        <MapView {drawNodes} {scale} {state} />
 
         {#if newObstacle && mousePosition}
             <div class="opacity-50">

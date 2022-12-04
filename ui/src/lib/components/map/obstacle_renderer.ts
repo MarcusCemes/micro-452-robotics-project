@@ -1,10 +1,11 @@
-import type { State } from "$lib/connection";
+import type { ExtraObstacle, State } from "$lib/connection";
 import type { Scale } from "$lib/stores";
 import { Vec2 } from "$lib/utils";
 
 const NODE_COLOUR = "#22c55e";
+const NODE_COLOUR_BOUNDARY = "#f97316";
 const NODE_COLOUR_OBSTACLE = "#ef4444";
-const NODE_RADIUS = 1;
+const NODE_RADIUS = 1.5;
 const TWO_PI = Math.PI * 2;
 
 export class ObstacleRenderer {
@@ -60,48 +61,42 @@ export class ObstacleRenderer {
 
     public drawNodes(
         obstacles: State["obstacles"],
-        extraObstacles: State["extra_obstacles"]
+        extraObstacles: State["extra_obstacles"],
+        boundaryMap: State["boundary_map"],
+        scale: Scale,
+        nodes: State["nodes"]
     ) {
+        console.log("drawing nodes");
         this.ctx.save();
 
         const step = this.size();
         const offset = new Vec2(0.5, 0.5);
 
+        const colour = new NodeColour(
+            obstacles,
+            extraObstacles,
+            boundaryMap,
+            scale
+        );
+
         for (const coords of this.coordinates()) {
-            const pos = coords.add(offset).multiplyBy(step);
+            const correctedY = this.subdivisions - coords.y - 1;
 
-            const obstructed = this.isObstructed(
-                coords,
-                pos.toPhysicalSpace(this.scale),
-                obstacles,
-                extraObstacles
-            );
+            if (
+                boundaryMap?.at(-coords.y - 1)?.at(coords.x) !== 0 ||
+                nodes.length === 0 ||
+                nodes.some(([x, y]) => x === coords.x && y === correctedY)
+            ) {
+                const pos = coords.add(offset).multiplyBy(step);
 
-            this.ctx.fillStyle = obstructed
-                ? NODE_COLOUR_OBSTACLE
-                : NODE_COLOUR;
-
-            this.ctx.beginPath();
-            this.ctx.arc(pos.x, pos.y, NODE_RADIUS, 0, TWO_PI);
-            this.ctx.fill();
+                this.ctx.fillStyle = colour.get(coords);
+                this.ctx.beginPath();
+                this.ctx.arc(pos.x, pos.y, NODE_RADIUS, 0, TWO_PI);
+                this.ctx.fill();
+            }
         }
 
         this.ctx.restore();
-    }
-
-    private isObstructed(
-        coords: Vec2,
-        position: Vec2,
-        obstacles: State["obstacles"],
-        extraObstacles: State["extra_obstacles"]
-    ): boolean {
-        return (
-            obstacles.at(-coords.y - 1)?.at(coords.x) === 1 ||
-            extraObstacles.some(
-                ([[x1, y1], [x2, y2]]) =>
-                    within(position.x, x1, x2) && within(position.y, y1, y2)
-            )
-        );
     }
 
     private *coordinates() {
@@ -123,6 +118,51 @@ export class ObstacleRenderer {
     }
 }
 
+class NodeColour {
+    constructor(
+        private readonly obstacles: State["obstacles"],
+        private readonly extraObstacles: State["extra_obstacles"],
+        private readonly boundaryMap: State["boundary_map"],
+        private readonly scale: Scale
+    ) {}
+
+    public get(coords: Vec2) {
+        const pos = coords.toPhysicalSpace(this.scale);
+
+        if (this.isObstructed(coords, pos)) return NODE_COLOUR_OBSTACLE;
+        else if (this.isInBoundary(coords)) return NODE_COLOUR_BOUNDARY;
+        else return NODE_COLOUR;
+    }
+
+    private isInBoundary(coords: Vec2) {
+        return this.boundaryMap && this.obstacle(coords, this.boundaryMap);
+    }
+
+    private isObstructed(coords: Vec2, position: Vec2) {
+        return (
+            this.obstacle(coords) ||
+            this.extraObstacles.some((o) => this.inExtraObstacle(position, o))
+        );
+    }
+
+    private inExtraObstacle(position: Vec2, obstacle: ExtraObstacle) {
+        const [[x1, y1], [x2, y2]] = obstacle;
+        return within(position.x, x1, x2) && within(position.y, y1, y2);
+    }
+
+    private obstacle(coords: Vec2, map = this.obstacles) {
+        return map.at(-coords.y - 1)?.at(coords.x) !== 0;
+    }
+}
+
 function within(x: number, a: number, b: number) {
-    return x >= Math.min(a, b) && x <= Math.max(a, b);
+    return x >= min(a, b) && x <= max(a, b);
+}
+
+function min(a: number, b: number) {
+    return a > b ? b : a;
+}
+
+function max(a: number, b: number) {
+    return a > b ? a : b;
 }
