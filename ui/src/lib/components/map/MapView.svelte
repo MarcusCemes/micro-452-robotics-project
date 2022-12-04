@@ -12,6 +12,7 @@
     export let state: State;
 
     $: ({
+        boundary_map: boundaryMap,
         extra_obstacles: extraObstacles,
         obstacles,
         orientation,
@@ -29,7 +30,14 @@
 </script>
 
 {#if extraObstacles && obstacles && subdivisions}
-    <Obstacles {nodes} {extraObstacles} {obstacles} {scale} {subdivisions} />
+    <Obstacles
+        {nodes}
+        {boundaryMap}
+        {extraObstacles}
+        {obstacles}
+        {scale}
+        {subdivisions}
+    />
 {/if}
 
 {#if path}

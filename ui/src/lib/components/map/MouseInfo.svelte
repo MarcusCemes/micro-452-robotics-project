@@ -12,7 +12,7 @@
 
     function toCoords(position?: Vec2) {
         if (!position) return;
-        const r = position.multiply(subdivisions).divideBy(scale.physicalSize);
+        const r = position.multiply(subdivisions).divide(scale.physicalSize);
         return new Vec2(Math.floor(r.x), Math.floor(r.y));
     }
 </script>

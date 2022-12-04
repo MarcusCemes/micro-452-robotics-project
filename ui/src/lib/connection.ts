@@ -13,8 +13,8 @@ const SERVER_URL = "ws://localhost:8080/ws";
 
 /* == Types == */
 
-type Tuple2<T = number> = [T, T];
-type ExtraObstacle = Tuple2<Tuple2>;
+export type Tuple2<T = number> = [T, T];
+export type ExtraObstacle = Tuple2<Tuple2>;
 
 export interface State {
     position: Tuple2 | null;
@@ -27,10 +27,11 @@ export interface State {
     next_waypoint_index: number | null;
     obstacles: number[][];
     extra_obstacles: ExtraObstacle[];
+    boundary_map: number[][] | null;
     computation_time: number | null;
 
     subdivisions: number;
-    physical_size: Tuple2;
+    physical_size: number;
 
     prox_sensors: number[];
     relative_distances: number[];

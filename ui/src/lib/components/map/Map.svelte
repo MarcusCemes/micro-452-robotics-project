@@ -69,8 +69,16 @@
         mousePosition = null;
     }
 
-    function onKeyPress(event: KeyboardEvent) {
-        if (event.key === "escape") {
+    function onKeyDown(event: KeyboardEvent) {
+        if (newObstacle && event.key === "Escape") {
+            event.preventDefault();
+            newObstacle = null;
+        }
+    }
+
+    function onContextMenu(event: MouseEvent) {
+        if (newObstacle) {
+            event.preventDefault();
             newObstacle = null;
         }
     }
@@ -83,7 +91,7 @@
     }
 </script>
 
-<svelte:window on:keypress={onKeyPress} />
+<svelte:window on:keydown={onKeyDown} />
 
 <Actions bind:action bind:nodes on:clear={clearObstacles} />
 
@@ -93,6 +101,7 @@
     on:click={onClick}
     on:mousemove={onMouseMove}
     on:mouseleave={onMouseLeave}
+    on:contextmenu={onContextMenu}
     bind:clientWidth={$mapSize.x}
     bind:clientHeight={$mapSize.y}
     class="relative w-96 h-96 bg-white ring-1 ring-gray-200 rounded overflow-hidden shadow-2xl transition"

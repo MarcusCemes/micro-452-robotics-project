@@ -1,12 +1,14 @@
 <script lang="ts">
     import { server } from "$lib/connection";
 
+    const FILTERED_KEYS = ["path", "obstacles", "boundary_map"];
+
     $: stateText = JSON.stringify(filter($server.state), null, 2);
 
     function filter(state: any) {
         const newState = { ...state };
 
-        for (const key of ["path", "obstacles"]) {
+        for (const key of FILTERED_KEYS) {
             if (key in newState) {
                 newState[key] = "<filtered>";
             }

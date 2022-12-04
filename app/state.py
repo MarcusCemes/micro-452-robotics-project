@@ -1,10 +1,14 @@
 from dataclasses import dataclass, field
 from typing import Any
 
-from app.config import PHYSICAL_SIZE, SUBDIVISIONS
+import numpy as np
+
+from app.config import PHYSICAL_SIZE_CM, SUBDIVISIONS
+from app.path_finding.types import Map
 from app.utils.types import Signal, Vec2
 
-ExtraObstacle = tuple[Vec2, Vec2]
+ObstacleQuad = tuple[Vec2, Vec2]
+
 
 OMITTED_KEYS = ["_dirty", "_changes"]
 
@@ -12,12 +16,16 @@ OMITTED_KEYS = ["_dirty", "_changes"]
 class ChangeListener:
     def __init__(self, state: "State"):
         self._state = state
-        self._changes = dict()
+        self._changes = {}
 
     def get_patch(self) -> dict[str, Any]:
-        changes = self._changes
-        self._changes = dict()
-        return changes
+        patch = {
+            key: make_serialisable(value)
+            for key, value in self._changes.items()
+        }
+
+        self._changes = {}
+        return patch
 
     def _add_change(self, key: str, value: Any):
         self._changes[key] = value
@@ -51,12 +59,13 @@ class State:
     path: list[Vec2] | None = None
     next_waypoint_index: int | None = None
     obstacles: list[list[int]] = field(default_factory=list)
-    extra_obstacles: list[ExtraObstacle] = field(default_factory=list)
+    extra_obstacles: list[ObstacleQuad] = field(default_factory=list)
+    boundary_map: Map | None = None
     computation_time: float | None = None
 
     # == Vision == #
     subdivisions: int = SUBDIVISIONS
-    physical_size: Vec2 = PHYSICAL_SIZE
+    physical_size: float = PHYSICAL_SIZE_CM
 
     # == Local Navigation == #
     prox_sensors: list[float] | None = None
@@ -77,7 +86,7 @@ class State:
 
     def json(self):
         return {
-            key: value
+            key: make_serialisable(value)
             for (key, value) in self.__dict__.items()
             if key not in OMITTED_KEYS
         }
@@ -99,17 +108,11 @@ class State:
         await self._dirty.wait()
 
 
-def create_patch(a: dict[str, Any], b: dict[str, Any]):
-    return {
-        key: value
-        for key, value in b.items()
-        if key not in a
-        or type(value) is list and value is not a[key]
-        or type(value) is not list and a[key] != value
-    }
+def make_serialisable(value: Any):
+    return value.tolist() if isinstance(value, np.ndarray) else value
 
 
-def normalise_obstacle(obstacle: ExtraObstacle) -> ExtraObstacle:
+def normalise_obstacle(obstacle: ObstacleQuad) -> ObstacleQuad:
     """
     Rearrange obstacle vector components, such that the first vector points
     to the bottom-left of the obstacle (minimum components), vice-versa.

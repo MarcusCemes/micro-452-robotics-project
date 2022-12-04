@@ -40,14 +40,14 @@ export class Vec2 {
     }
 
     toScreenSpace(scale: Scale, invertY = true): Vec2 {
-        const r = this.divideBy(scale.physicalSize).multiplyBy(scale.mapSize);
+        const r = this.divide(scale.physicalSize).multiplyBy(scale.mapSize);
         if (invertY) r.y = scale.mapSize.y - r.y;
         return r;
     }
 
     toPhysicalSpace(scale: Scale, invertY = true): Vec2 {
-        const r = this.divideBy(scale.mapSize).multiplyBy(scale.physicalSize);
-        if (invertY) r.y = scale.physicalSize.y - r.y;
+        const r = this.divideBy(scale.mapSize).multiply(scale.physicalSize);
+        if (invertY) r.y = scale.physicalSize - r.y;
         return r;
     }
 

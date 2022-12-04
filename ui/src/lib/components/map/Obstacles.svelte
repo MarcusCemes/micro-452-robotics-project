@@ -3,6 +3,7 @@
     import type { Scale } from "$lib/stores";
     import { ObstacleRenderer } from "./obstacle_renderer";
 
+    export let boundaryMap: State["boundary_map"];
     export let extraObstacles: State["extra_obstacles"];
     export let nodes = false;
     export let obstacles: State["obstacles"];
@@ -20,7 +21,12 @@
             renderer.drawObstacles(obstacles, extraObstacles);
 
             if (nodes) {
-                renderer.drawNodes(obstacles, extraObstacles);
+                renderer.drawNodes(
+                    obstacles,
+                    extraObstacles,
+                    boundaryMap,
+                    scale
+                );
             }
         }
     }
