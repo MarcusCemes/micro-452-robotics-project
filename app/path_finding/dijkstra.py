@@ -1,3 +1,4 @@
+from app.path_finding.path_optimiser import PathOptimiser
 from app.path_finding.types import Algorithm, Location, WeightedGraph
 from app.path_finding.utils import PriorityQueue
 
@@ -9,13 +10,14 @@ INF = float('inf')
 
 class Dijkstra(Algorithm):
 
-    def __init__(self, graph: WeightedGraph):
+    def __init__(self, graph: WeightedGraph, optimise=True):
         self.graph = graph
+        self.optimise = optimise
 
     def find_path(
         self,
         start: Location,
-        end: Location,
+        end: Location
     ) -> list[Location] | None:
         frontier = PriorityQueue()
         cost: Cost = {}
@@ -31,7 +33,7 @@ class Dijkstra(Algorithm):
 
             (_, current_cost) = cost[current]
 
-            for next in self.graph.neighbors(current):
+            for next in self.graph.neighbors(current, end):
                 new_cost = current_cost + self.graph.cost(current, next)
 
                 (_, old_cost) = cost.get(next, (None, INF))
@@ -39,7 +41,12 @@ class Dijkstra(Algorithm):
                     cost[next] = (current, new_cost)
                     frontier.put(next, new_cost)
 
-        return self._reconstruct_path(cost, end)
+        path = self._reconstruct_path(cost, end)
+
+        if path and self.optimise:
+            path = PathOptimiser(self.graph.map).optimise(path)
+
+        return path
 
     def _reconstruct_path(
         self,

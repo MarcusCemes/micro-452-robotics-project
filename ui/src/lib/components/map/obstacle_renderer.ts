@@ -63,8 +63,10 @@ export class ObstacleRenderer {
         obstacles: State["obstacles"],
         extraObstacles: State["extra_obstacles"],
         boundaryMap: State["boundary_map"],
-        scale: Scale
+        scale: Scale,
+        nodes: State["nodes"]
     ) {
+        console.log("drawing nodes");
         this.ctx.save();
 
         const step = this.size();
@@ -78,58 +80,23 @@ export class ObstacleRenderer {
         );
 
         for (const coords of this.coordinates()) {
-            const pos = coords.add(offset).multiplyBy(step);
+            const correctedY = this.subdivisions - coords.y - 1;
 
-            this.ctx.fillStyle = colour.get(coords);
-            this.ctx.beginPath();
-            this.ctx.arc(pos.x, pos.y, NODE_RADIUS, 0, TWO_PI);
-            this.ctx.fill();
+            if (
+                boundaryMap?.at(-coords.y - 1)?.at(coords.x) !== 0 ||
+                nodes.length === 0 ||
+                nodes.some(([x, y]) => x === coords.x && y === correctedY)
+            ) {
+                const pos = coords.add(offset).multiplyBy(step);
+
+                this.ctx.fillStyle = colour.get(coords);
+                this.ctx.beginPath();
+                this.ctx.arc(pos.x, pos.y, NODE_RADIUS, 0, TWO_PI);
+                this.ctx.fill();
+            }
         }
 
         this.ctx.restore();
-    }
-
-    private nodeColour(
-        coords: Vec2,
-        position: Vec2,
-        obstacles: State["obstacles"],
-        extraObstacles: State["extra_obstacles"]
-    ) {
-        if (this.isObstructed(coords, position, obstacles, extraObstacles))
-            return NODE_COLOUR_OBSTACLE;
-        else if (this.isInBoundary(coords, position, obstacles, extraObstacles))
-            return NODE_COLOUR_BOUNDARY;
-        else return NODE_COLOUR;
-    }
-
-    private isInBoundary(
-        coords: Vec2,
-        position: Vec2,
-        obstacles: State["obstacles"],
-        extraObstacles: State["extra_obstacles"]
-    ) {
-        return (
-            coords.x === 0 ||
-            coords.y === 0 ||
-            coords.x === this.subdivisions - 1 ||
-            coords.y === this.subdivisions - 1 ||
-            this.isObstructed(coords, position, obstacles, extraObstacles)
-        );
-    }
-
-    private isObstructed(
-        coords: Vec2,
-        position: Vec2,
-        obstacles: State["obstacles"],
-        extraObstacles: State["extra_obstacles"]
-    ): boolean {
-        return (
-            obstacles.at(-coords.y - 1)?.at(coords.x) === 1 ||
-            extraObstacles.some(
-                ([[x1, y1], [x2, y2]]) =>
-                    within(position.x, x1, x2) && within(position.y, y1, y2)
-            )
-        );
     }
 
     private *coordinates() {

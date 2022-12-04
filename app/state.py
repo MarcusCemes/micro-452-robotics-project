@@ -4,7 +4,7 @@ from typing import Any
 import numpy as np
 
 from app.config import PHYSICAL_SIZE_CM, SUBDIVISIONS
-from app.path_finding.types import Map
+from app.path_finding.types import Location, Map
 from app.utils.types import Signal, Vec2
 
 ObstacleQuad = tuple[Vec2, Vec2]
@@ -62,6 +62,8 @@ class State:
     extra_obstacles: list[ObstacleQuad] = field(default_factory=list)
     boundary_map: Map | None = None
     computation_time: float | None = None
+    nodes: list[Location] | None = None
+    optimise: bool = False
 
     # == Vision == #
     subdivisions: int = SUBDIVISIONS

@@ -38,7 +38,7 @@ async def websocket_handler(request: Request):
     ws = WebSocketResponse()
     await ws.prepare(request)
 
-    debug("[server] Client connected")
+    debug("\\[server] Client connected")
 
     try:
         listener = ctx.state.register_listener()
@@ -50,13 +50,13 @@ async def websocket_handler(request: Request):
         await handle_rx(ws, ctx)
 
         tx.cancel()
-        debug("[server] Client disconnected")
+        debug("\\[server] Client disconnected")
 
     except ConnectionResetError:
         pass
 
     except Exception:
-        error("[server] Error sending initial state!")
+        error("\\[server] Error sending initial state!")
         print_exc()
         print(ctx.state)
 
@@ -79,7 +79,7 @@ async def handle_tx(ws: WebSocketResponse, listener: ChangeListener):
         pass
 
     except Exception:
-        error("[server] Error sending patch!")
+        error("\\[server] Error sending patch!")
         print_exc()
 
 
@@ -109,6 +109,9 @@ async def handle_message(msg: Any, ws: WebSocketResponse, ctx: Context):
 
         case "clear_obstacles":
             ctx.state.extra_obstacles = []
+
+        case "optimise":
+            ctx.state.optimise = msg["data"]
 
     ctx.state.changed()
     ctx.scene_update.trigger()

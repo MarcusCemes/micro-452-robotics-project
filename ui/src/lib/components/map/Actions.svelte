@@ -6,14 +6,19 @@
     const dispatch = createEventDispatcher();
 
     export let action: string | null = null;
-    export let nodes: boolean;
+    export let drawNodes: boolean;
+    export let optimise: boolean;
 
     function setAction(newAction: string) {
         action = newAction;
     }
 
     function toggleNodes() {
-        nodes = !nodes;
+        drawNodes = !drawNodes;
+    }
+
+    function toggleOptimise() {
+        dispatch("optimise", !optimise);
     }
 
     function clear() {
@@ -21,7 +26,7 @@
     }
 </script>
 
-<div class="mb-2">
+<div class="mb-2 flex items-center gap-x-1">
     <IconButton on:click={() => setAction("start")} active={action === "start"}>
         <span class="w-2 h-2 rounded-full bg-green-500" />
     </IconButton>
@@ -38,7 +43,9 @@
 
     <IconButton on:click={clear}>🗑️</IconButton>
 
-    <IconButton on:click={toggleNodes} active={nodes}>
+    <IconButton on:click={toggleNodes} active={drawNodes}>
         <span class="w-2 h-2 rounded-full bg-orange-500" />
     </IconButton>
+
+    <IconButton on:click={toggleOptimise} active={optimise}>🧭</IconButton>
 </div>

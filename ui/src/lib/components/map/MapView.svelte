@@ -7,7 +7,7 @@
     import Path from "./Path.svelte";
     import Thymio from "./Thymio.svelte";
 
-    export let nodes = false;
+    export let drawNodes = false;
     export let scale: Scale;
     export let state: State;
 
@@ -16,8 +16,11 @@
         extra_obstacles: extraObstacles,
         obstacles,
         orientation,
+        nodes,
         subdivisions,
     } = state);
+
+    $: console.log(boundaryMap);
 
     $: start = Vec2.tryParse(state.start);
     $: end = Vec2.tryParse(state.end);
@@ -31,9 +34,10 @@
 
 {#if extraObstacles && obstacles && subdivisions}
     <Obstacles
-        {nodes}
+        {drawNodes}
         {boundaryMap}
         {extraObstacles}
+        {nodes}
         {obstacles}
         {scale}
         {subdivisions}

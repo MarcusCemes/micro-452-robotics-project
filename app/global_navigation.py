@@ -9,7 +9,7 @@ from scipy.signal import convolve2d
 from app.config import SAFE_DISTANCE
 from app.context import Context
 from app.path_finding.dijkstra import Dijkstra
-from app.path_finding.square_grid import SquareGrid
+from app.path_finding.grid_graph import GridGraph
 from app.path_finding.types import Algorithm, Location, Map
 from app.path_finding.utils import clamp
 from app.state import ObstacleQuad
@@ -41,8 +41,12 @@ class GlobalNavigation(BackgroundTask):
         self.ctx.state.boundary_map = map
         self.ctx.state.changed()
 
-        graph = SquareGrid(map)
-        algo = Dijkstra(graph)
+        graph = GridGraph(map)
+
+        self.ctx.state.nodes = graph.nodes
+        self.ctx.state.changed()
+
+        algo = Dijkstra(graph, self.ctx.state.optimise)
         start = self._to_location(start)
         end = self._to_location(end)
 
