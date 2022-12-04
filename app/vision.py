@@ -99,7 +99,11 @@ class Vision:
         self.__focus_table()
         self.__final_table()
         self.__robot_coordinates()
-        return self.table64, (self.final_x, self.final_y, self.theta), ((self.final_x/FINAL_SIZE)*TABLE_LEN, (self.final_y/FINAL_SIZE)*TABLE_LEN, self.theta)
+
+        # degrees to radiants
+        theta_rad = self.theta * pi/180
+
+        return self.table64, (self.final_x, self.final_y, theta_rad), ((self.final_x/FINAL_SIZE)*TABLE_LEN, (self.final_y/FINAL_SIZE)*TABLE_LEN, theta_rad)
 
     def __focus_table(self):
         self.table = cv2.warpPerspective(
