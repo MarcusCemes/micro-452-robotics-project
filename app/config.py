@@ -19,9 +19,10 @@ DT_THRESHOLD = 0.6
 USE_EXTERNAL_CAMERA = False
 USE_LIVE_CAMERA = False
 
+SCENE_THRESHOLD = 2  # number of obstacles changes to trigger a scene update
 PIXELS_PER_CM = 5   # number of pixels in each cm
 TABLE_LEN = 58      # size in cm of the table
 LM_FRONT = 2.7      # diameter of the front landmark in cm
 LM_BACK = 3.2      # diameter of the back landmark in cm
-SAFE_DISTANCE = 6   # distance from the hole of the robot until the further point in cm
+SAFE_DISTANCE = 10   # distance from the hole of the robot until the further point in cm
 FINAL_SIZE = 64     # size of the final matrix sent to the path planning module

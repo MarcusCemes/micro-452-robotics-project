@@ -7,8 +7,16 @@ from aiohttp.web import (Application, AppRunner, Request, TCPSite,
                          WebSocketResponse, get)
 
 from app.context import Context
+from app.filtering import Filtering
 from app.state import ChangeListener, normalise_obstacle
 from app.utils.console import *
+
+filteringModule: Filtering | None = None
+
+
+def setFilteringModule(filtering: Filtering):
+    global filteringModule
+    filteringModule = filtering
 
 
 class Server:
@@ -95,8 +103,10 @@ async def handle_message(msg: Any, ws: WebSocketResponse, ctx: Context):
             id = msg["data"]
             await ws.send_json({"type": "pong", "data": id})
 
-        case "set_start":
-            ctx.state.start = msg["data"]
+        case "set_position":
+            if filteringModule:
+                for _ in range(0, 10):
+                    filteringModule.update((*msg["data"], 0))
 
         case "set_end":
             ctx.state.end = msg["data"]
@@ -113,8 +123,17 @@ async def handle_message(msg: Any, ws: WebSocketResponse, ctx: Context):
         case "optimise":
             ctx.state.optimise = msg["data"]
 
+        case "stop":
+            ctx.node.send_set_variables({
+                "motor.left.target": [0],
+                "motor.right.target": [0],
+            })
+
+            exit()
+
     ctx.state.changed()
     ctx.scene_update.trigger()
+    debug("Scene updated")
 
 
 def create_app(ctx: Context):

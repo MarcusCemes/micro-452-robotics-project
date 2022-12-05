@@ -38,7 +38,7 @@ class LocalNavigation(ThymioEventProcessor):
     def should_freestyle(self):
         distances = np.array(self.ctx.state.relative_distances)
         if (distances.min() < 3.5):
-            self.ctx.state.reactive_control = True
+            #self.ctx.state.reactive_control = True
             self.last_time = time()
             return
 

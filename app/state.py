@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 import numpy as np
+import numpy.typing as npt
 
 from app.config import PHYSICAL_SIZE_CM, SUBDIVISIONS
 from app.path_finding.types import Location, Map
@@ -52,13 +53,12 @@ class State:
     orientation: float | None = None
 
     # == Navigation == #
-    start: Vec2 | None = None
     end: Vec2 | None = None
 
     # == Global Navigation == #
     path: list[Vec2] | None = None
     next_waypoint_index: int | None = None
-    obstacles: list[list[int]] = field(default_factory=list)
+    obstacles: npt.NDArray[np.int8] | None = None
     extra_obstacles: list[ObstacleQuad] = field(default_factory=list)
     boundary_map: Map | None = None
     computation_time: float | None = None
@@ -73,6 +73,7 @@ class State:
     prox_sensors: list[float] | None = None
     relative_distances: list[float] = field(default_factory=list)
     reactive_control: bool | None = None
+    dist: float | None = None
 
     # == Methods == #
 

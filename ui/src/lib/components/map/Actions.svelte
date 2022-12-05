@@ -24,11 +24,18 @@
     function clear() {
         dispatch("clear");
     }
+
+    function stop() {
+        dispatch("stop");
+    }
 </script>
 
 <div class="mb-2 flex items-center gap-x-1">
-    <IconButton on:click={() => setAction("start")} active={action === "start"}>
-        <span class="w-2 h-2 rounded-full bg-green-500" />
+    <IconButton
+        on:click={() => setAction("position")}
+        active={action === "position"}
+    >
+        <span class="w-2 h-2 bg-gray-500" />
     </IconButton>
     <IconButton on:click={() => setAction("end")} active={action === "end"}>
         <span class="w-2 h-2 rounded-full bg-red-500" />
@@ -48,4 +55,6 @@
     </IconButton>
 
     <IconButton on:click={toggleOptimise} active={optimise}>🧭</IconButton>
+
+    <IconButton on:click={stop}>⛔</IconButton>
 </div>

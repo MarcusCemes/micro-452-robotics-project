@@ -19,7 +19,7 @@
     viewBox={`0 0 ${width} ${height}`}
     {width}
     {height}
-    class="absolute top-0 left-0 text-teal-500"
+    class="absolute top-0 left-0 text-teal-400"
 >
     <polyline
         {points}

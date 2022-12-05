@@ -1,13 +1,18 @@
 
 from asyncio import FIRST_COMPLETED, Event, create_task, sleep, wait
 
-from app.config import (SLEEP_INTERVAL, SUBDIVISIONS, USE_EXTERNAL_CAMERA,
-                        USE_LIVE_CAMERA)
+import numpy as np
+import numpy.typing as npt
+
+from app.config import (SCENE_THRESHOLD, SLEEP_INTERVAL, SUBDIVISIONS,
+                        USE_EXTERNAL_CAMERA, USE_LIVE_CAMERA)
 from app.context import Context
 from app.filtering import Filtering
 from app.global_navigation import GlobalNavigation
 from app.local_navigation import LocalNavigation
 from app.motion_control import MotionControl
+from app.path_finding.types import Map
+from app.server import setFilteringModule
 from app.utils.console import *
 from app.vision import Vision
 
@@ -19,6 +24,7 @@ class BigBrain:
         self.sleep_interval = sleep_interval
 
     async def start_thinking(self):
+        self.init()
 
         # create_task(self.do_pings())
         # create_task(self.do_start_stop())
@@ -37,6 +43,11 @@ class BigBrain:
                 global_nav,
                 local_nav,
             )
+
+    def init(self):
+        # Initialise the obstacle array
+        subdivs = self.ctx.state.subdivisions
+        self.ctx.state.obstacles = np.zeros((subdivs, subdivs), dtype=np.int8)
 
     async def do_pings(self):
         while True:
@@ -69,18 +80,25 @@ class BigBrain:
         global_nav: GlobalNavigation,
         local_nav: LocalNavigation,
     ):
+        setFilteringModule(filtering)
+
         vision.calibrate()
 
         while True:
             obstacles, posImg, posPhy = vision.update()
 
-            # update filtering with camera reading
-            filtering.update(posPhy)
+            # obstacles[:][:] = 0
 
-            self.ctx.state.obstacles = obstacles.tolist()
-            self.ctx.state.changed()
-            self.ctx.scene_update.trigger()
-            await sleep(0.5)
+            if self.significant_change(obstacles):
+                debug("\\[big brain] Scene changed significantly, updating")
+                # update filtering with camera reading
+                # filtering.update(posPhy)
+
+                self.ctx.state.obstacles = obstacles.tolist()
+                self.ctx.state.changed()
+                self.ctx.scene_update.trigger()
+
+            await sleep(1)
 
         while True:
 
@@ -112,3 +130,12 @@ class BigBrain:
             sleep(self.sleep_interval),
             filtering.proximity_event()
         ], return_when=FIRST_COMPLETED)
+
+    def significant_change(self, obstacles: Map) -> bool:
+        if self.ctx.state.obstacles is None:
+            return False
+
+        return self.matrix_distance(self.ctx.state.obstacles, obstacles) > SCENE_THRESHOLD
+
+    def matrix_distance(self, a: Map, b: Map) -> int:
+        return np.sum(np.sum(np.abs(b - a)))

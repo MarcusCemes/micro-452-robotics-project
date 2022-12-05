@@ -67,7 +67,7 @@ class ExtendedKalmanFilter(object):
                            [0, 1, math.cos(self.E[2])*self.dt*self.U[0]],
                            [0, 0, 1]], dtype="f")
 
-        # Matrice d'observation, on observe que x et y
+        # Matrice d'observation, on observe que x, y et orientation
         self.H = np.array([[1, 0, 0],
                            [0, 1, 0],
                            [0, 0, 1]], dtype="f")
@@ -117,6 +117,7 @@ class ExtendedKalmanFilter(object):
 
         param speedL: left wheel speed sensor in cm/s
         param speedR: right wheel speed sensor in cm/s
+        param dt: time interval between measurements in seconds
 
         return E: estimated state
         """
@@ -130,6 +131,10 @@ class ExtendedKalmanFilter(object):
         self.E = np.dot(self.A, self.E) + np.dot(self.B, self.U)
         # Calcul de la covariance de l'erreur
         self.P = np.dot(np.dot(self.G, self.P), self.G.T)+self.Q
+
+        if (abs(self.E[2]) > math.pi):
+            self.E[2] = - 2*np.sign(self.E[2])*math.pi + self.E[2]
+
         return self.E[0].item(), self.E[1].item(), self.E[2].item()
 
     def update_ekf(self, z):
@@ -141,10 +146,11 @@ class ExtendedKalmanFilter(object):
         return E: estimated state
         """
         # WHERE DOES ORIENTATION APPEARS---------------------------------------------------------------------------------------------------------------
-        # Calcul du gain de Kalman
+        # innovation covariance
         S = np.dot(self.H, np.dot(self.P, self.H.T))+self.R
+        # kalman gain
         K = np.dot(np.dot(self.P, self.H.T), np.linalg.inv(S))
-  
+
         # Correction / innovation
         self.E: Any = np.round(
             self.E+np.dot(K, (z.T-np.dot(self.H, self.E))))

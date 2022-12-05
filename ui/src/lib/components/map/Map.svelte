@@ -15,7 +15,7 @@
     import Obstacle from "./Obstacle.svelte";
 
     let map: HTMLDivElement | null = null;
-    let action: "start" | "end" | "obstacle" | null = null;
+    let action: "position" | "end" | "obstacle" | null = null;
 
     let newObstacle: Vec2 | null = null;
     let mousePosition: Vec2 | null = null;
@@ -37,12 +37,16 @@
         send("optimise", !optimise);
     }
 
+    function onStop() {
+        send("stop", null);
+    }
+
     function onClick(event: MouseEvent) {
         const pos = getPosition(event).toPhysicalSpace(scale).array();
 
         switch (action) {
-            case "start":
-                send("set_start", pos);
+            case "position":
+                send("set_position", pos);
                 break;
 
             case "end":
@@ -104,6 +108,7 @@
     {optimise}
     on:clear={clearObstacles}
     on:optimise={onOptimise}
+    on:stop={onStop}
 />
 
 <!-- svelte-ignore a11y-click-events-have-key-events -->

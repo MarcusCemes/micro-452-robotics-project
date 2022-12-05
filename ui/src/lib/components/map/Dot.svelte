@@ -4,6 +4,7 @@
 
     export let ping = false;
     export let position: Vec2;
+    export let small = false;
 
     let className: string | undefined = undefined;
     export { className as class };
@@ -13,7 +14,8 @@
 
 <div
     class={classes(
-        "absolute -top-2 -left-2 w-4 h-4 rounded-full transform",
+        "absolute rounded-full transform",
+        small ? "w-2 h-2 -top-1 -left-1" : "w-4 h-4 -top-2 -left-2",
         className
     )}
     style:--tw-translate-x={`${screenPosition.x}px`}

@@ -10,7 +10,7 @@
 </script>
 
 <svg
-    class="absolute w-6"
+    class="absolute w-6 opacity-80"
     viewBox="0 0 64 100"
     xmlns="http://www.w3.org/2000/svg"
     style:--translateX={`${screenPosition.x}px`}
@@ -22,6 +22,7 @@
         fill="#ddd"
         stroke="#000"
     />
+    <circle cx="32" cy="50" r="0.5rem" fill="#ea580c" />
 </svg>
 
 <style>

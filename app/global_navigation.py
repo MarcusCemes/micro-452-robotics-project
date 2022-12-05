@@ -31,11 +31,13 @@ class GlobalNavigation(BackgroundTask):
             await self._recompute_path()
 
     async def _recompute_path(self):
-        start = self.ctx.state.start
+        start = self.ctx.state.position
         end = self.ctx.state.end
 
         if not start or not end:
             return False
+
+        # TODO Check if obstacle array is defined/ready?
 
         map = self._generate_map()
         self.ctx.state.boundary_map = map
@@ -57,6 +59,7 @@ class GlobalNavigation(BackgroundTask):
 
         self.ctx.state.path = path
         self.ctx.state.computation_time = time
+        self.ctx.state.next_waypoint_index = 0
         self.ctx.state.changed()
 
         return True

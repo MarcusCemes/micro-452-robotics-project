@@ -23,7 +23,6 @@ export interface State {
     position: Tuple2 | null;
     orientation: number | null;
 
-    start: Tuple2 | null;
     end: Tuple2 | null;
 
     path: Tuple2[] | null;

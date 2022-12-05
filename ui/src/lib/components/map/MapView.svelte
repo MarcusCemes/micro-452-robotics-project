@@ -16,13 +16,11 @@
         extra_obstacles: extraObstacles,
         obstacles,
         orientation,
+        next_waypoint_index,
         nodes,
         subdivisions,
     } = state);
 
-    $: console.log(boundaryMap);
-
-    $: start = Vec2.tryParse(state.start);
     $: end = Vec2.tryParse(state.end);
 
     $: path = state.path
@@ -30,6 +28,15 @@
         .filter((x): x is Vec2 => !!x);
 
     $: position = Vec2.tryParse(state.position);
+
+    $: next_waypoint =
+        typeof next_waypoint_index === "number" &&
+        path &&
+        path.length > next_waypoint_index
+            ? path[next_waypoint_index]
+            : null;
+
+    $: console.log(next_waypoint);
 </script>
 
 {#if extraObstacles && obstacles && subdivisions}
@@ -48,14 +55,14 @@
     <Path {path} {scale} />
 {/if}
 
-{#if start}
-    <Dot class="bg-green-500" position={start} />
-{/if}
-
 {#if end}
     <Dot class="bg-red-500" position={end} />
 {/if}
 
-{#if position && orientation}
+{#if next_waypoint}
+    <Dot class="bg-green-500" position={next_waypoint} small ping />
+{/if}
+
+{#if position && typeof orientation === "number"}
     <Thymio {position} {orientation} {scale} />
 {/if}
