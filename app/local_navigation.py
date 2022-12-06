@@ -1,3 +1,4 @@
+from asyncio import sleep
 from typing import Any
 import numpy as np
 import math
@@ -9,6 +10,7 @@ from app.utils.background_task import BackgroundTask
 from app.utils.event_processor import ThymioEventProcessor
 from app.config import PIXELS_PER_CM, FINAL_SIZE
 
+SLEEP_DURATION = 0.5
 
 center_offset = np.array([5.5, 5.5])
 thymio_coords = np.array([[0, 0], [11, 0], [11, 8.5], [10.2, 9.3],
@@ -35,18 +37,41 @@ class LocalNavigation(ThymioEventProcessor):
         self.map = np.array((FINAL_SIZE, FINAL_SIZE), dtype=bool)
         self.last_time = time()
 
-    def should_freestyle(self):
-        distances = np.array(self.ctx.state.relative_distances)
-        if (distances.min() < 3.5):
-            #self.ctx.state.reactive_control = True
-            self.last_time = time()
-            return
+    # == Implemented methods == #
 
-        now = time()
-        dt = now - self.last_time
-        if dt > 1.5 and self.ctx.state.reactive_control:
+    def process_event(self, variables: dict[str, Any]):
+        self.ctx.state.prox_sensors = variables["prox.horizontal"]
+        self.ctx.state.changed()
+
+        self.update()
+        self.should_freestyle()
+
+    async def run(self):
+        while True:
+            # DO CHECK
+            
+            await sleep(SLEEP_DURATION)
+
+    def updateWithoutSensor
+    # == Other methods == #
+
+    def should_freestyle(self):
+        print("freeeeeeeeeeeeeeee style 2€ par mois ?!! wow")
+        distances = np.array(self.ctx.state.relative_distances)
+        distances = distances[distances != -1]
+        if (len(distances) > 0 and self.ctx.state.reactive_control == False):
+            if (distances.min() < 3.5):
+                self.ctx.state.reactive_control = True
+                self.last_time = time()
+                return
+
+        dt = time() - self.last_time
+        print(dt, self.ctx.state.reactive_control)
+
+        if dt > 8 and self.ctx.state.reactive_control == True and distances.min() < 5:
+            print("hey heyyyy ")
             self.ctx.state.reactive_control = False
-            self.motion_control.setNewWaypoint()
+            self.motion_control.setNewWaypoint(1)
 
     def update(self):
         allDistances = self.getDistanceArray()
@@ -59,13 +84,6 @@ class LocalNavigation(ThymioEventProcessor):
                 globalPos = self.wayPointPerceivedToReal(relativeWalls[i])
                 indexes = globalPos/PIXELS_PER_CM
                 self.map[int(indexes[0])][int(indexes[1])] = True
-
-    def process_event(self, variables: dict[str, Any]):
-        self.ctx.state.prox_sensors = variables["prox.horizontal"]
-        self.ctx.state.changed()
-
-        self.update()
-        self.should_freestyle()
 
     def rotate(self, angle, coords):
         R = np.array([[np.cos(angle), -np.sin(angle)],

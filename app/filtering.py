@@ -65,7 +65,7 @@ class Filtering(ThymioEventProcessor):
         #print("x = " + str(pose_x_est) + " y =" + str(pose_y_est))
 
     def update(self, pose):  # from vision
-        debug("Bad man! Called updated, don't do that!")
+        debug("👮‍♂️ Bad man! Called updated, don't do that!")
         # filter recomputation and context update
 
         z = np.array([pose])

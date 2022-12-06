@@ -1,5 +1,3 @@
-
-from asyncio import create_task
 import numpy as np
 import math
 
@@ -28,7 +26,11 @@ class MotionControl(BackgroundTask):
             return
         if self.ctx.state.path is None:
             return
-
+        if self.ctx.state.next_waypoint_index == len(self.ctx.state.path)-1:
+            print("arrived")
+            self.ctx.state.arrived = True
+            return
+        
         index = min(self.ctx.state.next_waypoint_index +
                     indexMore, len(self.ctx.state.path)-1)
 
@@ -39,9 +41,6 @@ class MotionControl(BackgroundTask):
         if self.ctx.state.path[index] is None:
             print("is OUT")
             return
-
-        if (index == len(self.ctx.state.path)-1):
-            print("arrived")
 
         self.waypoint = self.ctx.state.path[index]
         self.ctx.state.next_waypoint_index = index
@@ -67,16 +66,14 @@ class MotionControl(BackgroundTask):
             if controlPos is None:
                 return
             (arrived, vLC, vRC) = controlPos
-
-        if arrived:
-            if self.ctx.state.next_waypoint_index is None:
-                # do a 180degree turn
-                return
-            if self.ctx.state.path is None:
-                return
-
-            print("next waypoint update")
-            self.setNewWaypoint(1)
+            if arrived:
+                if self.ctx.state.next_waypoint_index is None:
+                    # do a 180degree turn
+                    return
+                if self.ctx.state.path is None:
+                    return
+                print("next waypoint update")
+                self.setNewWaypoint(1)
 
         await self.ctx.node.set_variables(
             {"motor.left.target": [int(vLC)], "motor.right.target": [int(vRC)]})
@@ -145,8 +142,8 @@ class MotionControl(BackgroundTask):
         # 2nd priority, if smt in left sensor
         if (distances[0] != -1):
             self.times = 0
-            if (distances[0] < 6):
-                vAngle = -(distances[0]-6)*5
+            if (distances[0] < 5):
+                vAngle = -(distances[0]-5)*8
                 if (distances[0] < 4):
                     vForward = (distances[0]-4)*20
         # 1st priority, if sens smt in front stop

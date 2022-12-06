@@ -15,13 +15,14 @@ from app.path_finding.types import Map
 from app.server import setFilteringModule
 from app.utils.console import *
 from app.vision import Vision
-
+from app.christmas import Second_thymio
 
 class BigBrain:
 
     def __init__(self, ctx: Context, sleep_interval=SLEEP_INTERVAL):
         self.ctx = ctx
         self.sleep_interval = sleep_interval
+        self.second_thymio = Second_thymio(ctx)
 
     async def start_thinking(self):
         self.init()
@@ -63,6 +64,8 @@ class BigBrain:
                 # await sleep(2)
                 await self.ctx.node.set_variables(
                     {"motor.left.target": [100], "motor.right.target": [100]})
+                await self.ctx.secondary_node.set_variables(
+                    {"motor.left.target": [-100], "motor.right.target": [100]})
 
         except Exception:
             pass
@@ -97,6 +100,10 @@ class BigBrain:
                 self.ctx.state.obstacles = obstacles.tolist()
                 self.ctx.state.changed()
                 self.ctx.scene_update.trigger()
+
+            if self.ctx.state.arrived == True:
+                await self.second_thymio.drop_baulbe()
+                self.ctx.state.arrived == False
 
             await sleep(1)
 

@@ -124,17 +124,22 @@ async def handle_message(msg: Any, ws: WebSocketResponse, ctx: Context):
             ctx.state.optimise = msg["data"]
 
         case "stop":
-            ctx.node.send_set_variables({
-                "motor.left.target": [0],
-                "motor.right.target": [0],
-            })
-
-            exit()
+            stop_all(ctx)
 
     ctx.state.changed()
     ctx.scene_update.trigger()
     debug("Scene updated")
 
+
+def stop_all(ctx: Context):
+    for node in [ctx.node, ctx.secondary_node]:
+        node.send_set_variables({
+            "motor.left.target": [0],
+            "motor.right.target": [0],
+        })
+
+    critical("Emergency stop!")
+    exit()
 
 def create_app(ctx: Context):
     app = Application()

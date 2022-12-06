@@ -26,3 +26,7 @@ LM_FRONT = 2.7      # diameter of the front landmark in cm
 LM_BACK = 3.2      # diameter of the back landmark in cm
 SAFE_DISTANCE = 10   # distance from the hole of the robot until the further point in cm
 FINAL_SIZE = 64     # size of the final matrix sent to the path planning module
+
+# == Second Thymio == #
+DROP_SPEED = 50     # speed of the motors to drop the baulbe
+DROP_TIME = 1.5       # drop duration in seconds

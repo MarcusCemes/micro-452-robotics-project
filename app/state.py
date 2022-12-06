@@ -54,6 +54,7 @@ class State:
 
     # == Navigation == #
     end: Vec2 | None = None
+    arrived: bool | None = None
 
     # == Global Navigation == #
     path: list[Vec2] | None = None
