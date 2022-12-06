@@ -59,8 +59,8 @@ async def init():
         with Pool() as pool:
             with ClientAsync() as client:
                 status.update("Waiting for Thymio node")
-
-                with await client.nodes[0].lock() as node:
+                debug(client.nodes)
+                with await client.lock() as node:
 
                     info("Principal node connected")
                     debug(f"Node lock on {node}")
