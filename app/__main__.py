@@ -60,31 +60,51 @@ async def init():
             with ClientAsync() as client:
                 status.update("Waiting for Thymio node")
 
-                with await client.lock() as secondary_node:
+                with await client.nodes[0].lock() as node:
 
                     info("Principal node connected")
-                    debug(f"Node lock on {secondary_node}")
+                    debug(f"Node lock on {node}")
 
                     # Signal the Thymio to broadcast variable changes
-                    await secondary_node.watch(variables=True)
-                    
-                    status.update("Waiting for second Thymio node")
-                    
-                    with await client.lock() as secondary_node:
+                    await node.watch(variables=True)
+
+                    status.stop()
+                    wantSecondThymio = input("Do you want a second thymio to be connected? (y/n): ")
+                    status.start()
+
+                    if wantSecondThymio == "y":
+
+                        status.update("Waiting for second Thymio node")
+
+                        with await client.nodes[1].lock() as secondary_node:
+
+                            status.stop()
+                            status = None
+
+                            info("Secondary node connected")
+                            debug(f"Secondary Node lock on {secondary_node}")
+
+                            # Start processing Thymio messages
+                            create_task(process_messages(client))
+
+                            ctx = Context(node, secondary_node, pool, State())
+
+                            async with Server(ctx):
+                                brain = BigBrain(ctx)
+                                await brain.start_thinking()
+                    else:
+                        debug("single node mode selected")
                         status.stop()
                         status = None
-
-                        info("Secondary node connected")
-                        debug(f"Secondary Node lock on {node}")
 
                         # Start processing Thymio messages
                         create_task(process_messages(client))
 
-                        ctx = Context(node, secondary_node, pool, State())
+                        ctx = Context(node, None, pool, State())
 
                         async with Server(ctx):
                             brain = BigBrain(ctx)
-                            await brain.start_thinking()
+                            await brain.start_thinking()    
                 
 
     except ConnectionRefusedError:
