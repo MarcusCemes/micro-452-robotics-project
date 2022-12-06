@@ -6,6 +6,7 @@
     import Obstacles from "./Obstacles.svelte";
     import Path from "./Path.svelte";
     import Thymio from "./Thymio.svelte";
+    import Detect from "./Detect.svelte";
 
     export let drawNodes = false;
     export let scale: Scale;
@@ -14,6 +15,9 @@
     $: ({
         boundary_map: boundaryMap,
         extra_obstacles: extraObstacles,
+        last_detection: lastDetection,
+        last_detection_2: lastDetection2,
+        last_orientation: lastOrientation,
         obstacles,
         orientation,
         next_waypoint_index,
@@ -36,7 +40,8 @@
             ? path[next_waypoint_index]
             : null;
 
-    $: console.log(next_waypoint);
+    $: detectDot = Vec2.tryParse(lastDetection);
+    $: detect2Dot = Vec2.tryParse(lastDetection2);
 </script>
 
 {#if extraObstacles && obstacles && subdivisions}
@@ -65,4 +70,16 @@
 
 {#if position && typeof orientation === "number"}
     <Thymio {position} {orientation} {scale} />
+{/if}
+
+{#if lastDetection && typeof lastOrientation === "number"}
+    <Detect position={detectDot} orientation={lastOrientation} {scale} />
+{/if}
+
+{#if lastDetection}
+    <Dot class="bg-pink-500" position={detectDot} small ping />
+{/if}
+
+{#if lastDetection2}
+    <Dot class="bg-blue-600" position={detect2Dot} small ping />
 {/if}

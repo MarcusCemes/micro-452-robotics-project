@@ -36,6 +36,7 @@ export interface State {
 
     subdivisions: number;
     physical_size: number;
+    last_detection: Tuple2 | null;
 
     prox_sensors: number[];
     relative_distances: number[];

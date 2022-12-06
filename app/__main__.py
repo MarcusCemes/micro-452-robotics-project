@@ -12,6 +12,7 @@ from app.parallel import Pool
 from app.server import Server
 from app.state import State
 from app.utils.console import *
+from app.vision import close_capture_source
 
 
 def main():
@@ -32,6 +33,7 @@ def main():
         console.print_exception()
 
     finally:
+        close_capture_source()
         print("")
 
 
@@ -67,7 +69,8 @@ async def init():
                     await node.watch(variables=True)
 
                     status.stop()
-                    wantSecondThymio = input("Do you want a second thymio to be connected? (y/n): ")
+                    # wantSecondThymio = input("Do you want a second thymio to be connected? (y/n): ")
+                    wantSecondThymio = False
                     status.start()
 
                     if wantSecondThymio == "y":

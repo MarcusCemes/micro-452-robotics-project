@@ -69,6 +69,9 @@ class State:
     # == Vision == #
     subdivisions: int = SUBDIVISIONS
     physical_size: float = PHYSICAL_SIZE_CM
+    last_detection: Vec2 | None = None
+    last_detection_2: Vec2 | None = None
+    last_orientation: float | None = None
 
     # == Local Navigation == #
     prox_sensors: list[float] | None = None

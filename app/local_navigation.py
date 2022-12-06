@@ -49,10 +49,14 @@ class LocalNavigation(ThymioEventProcessor):
     async def run(self):
         while True:
             # DO CHECK
-            
+            self.updateWithoutSensors()
             await sleep(SLEEP_DURATION)
 
-    def updateWithoutSensor
+    def updateWithoutSensors(self):
+        dt = time() - self.last_time
+        if dt > 8 and self.ctx.state.reactive_control:
+            self.ctx.state.reactive_control = False
+            self.motion_control.setNewWaypoint(1)
     # == Other methods == #
 
     def should_freestyle(self):

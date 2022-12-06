@@ -3,6 +3,7 @@ from math import pi
 import cv2
 import numpy as np
 from scipy.signal import convolve2d
+import matplotlib as plt
 
 from app.config import *
 from app.context import Context
@@ -12,16 +13,31 @@ THRESHOLD = 128
 
 CALIBRATE_NAMED_WINDOW = "Calibrate camera perspective"
 
+COLORS = (
+    (35, 35, 35), #BLACK
+    (170, 150, 225), #PINK
+    (60, 125, 50), #GREEN
+    (210, 210, 210), #WHITE
+)
+
+CAPTURE_SOURCE = None
+
+def close_capture_source():
+    if CAPTURE_SOURCE is not None:
+        CAPTURE_SOURCE.release()
 
 class Vision:
 
     def __init__(self, ctx: Context, external=True, live=False):
+        global CAPTURE_SOURCE
+
         self.ctx = ctx
 
         # Create a VideoCapture object and read from input file
         # If the input is the camera, pass 0 instead of the video file name
         source = 1 if external else 0
-        self.cap = cv2.VideoCapture(source)
+        self.cap = cv2.VideoCapture(source, cv2.CAP_DSHOW)
+        CAPTURE_SOURCE = self.cap
 
         # Check if camera opened successfully
         if (self.cap.isOpened() == False and live == True):
@@ -30,8 +46,9 @@ class Vision:
 
         # create the masks in BGR
         self.color_obstacles = [(0, 0, 0), (70, 70, 70)]       # black
-        self.color_back = [(150, 140, 200), (200, 160, 255)]   # pink
-        self.color_front = [(100, 0, 0), (255, 60, 50)]        # blue
+        self.color_back = [(150, 100, 200), (210, 160, 255)]   # pink
+        self.color_front = [(30, 100, 30), (80, 150, 70)]        # blue
+        
 
         self.table_len = PIXELS_PER_CM*TABLE_LEN
 
@@ -84,6 +101,7 @@ class Vision:
             cv2.destroyWindow(CALIBRATE_NAMED_WINDOW)
 
         # Calculate Homography
+        debug("Selected points:", self.pts_src)
         self.h, _ = cv2.findHomography(self.pts_src, pts_dst)
 
     def __mouse_callback(self, event, x, y, flags, params):
@@ -98,12 +116,15 @@ class Vision:
         self.__get_frame()
         self.__focus_table()
         self.__final_table()
+        
+        self.table = self.get_Image_Color_array()
         self.__robot_coordinates()
 
         # degrees to radiants
         theta_rad = self.theta * pi/180
+        #theta_rad = 0
 
-        return self.table64, (self.final_x, self.final_y, theta_rad), ((self.final_x/FINAL_SIZE)*TABLE_LEN, (self.final_y/FINAL_SIZE)*TABLE_LEN, theta_rad)
+        return self.table64, (self.final_x, self.final_y, theta_rad), ((self.final_x/FINAL_SIZE)*TABLE_LEN, (self.final_y/FINAL_SIZE)*TABLE_LEN, theta_rad), (self.front_mark_x, self.front_mark_y), ((self.front_mark_x/FINAL_SIZE)*TABLE_LEN, (self.front_mark_y/FINAL_SIZE)*TABLE_LEN)
 
     def __focus_table(self):
         self.table = cv2.warpPerspective(
@@ -150,6 +171,10 @@ class Vision:
             PIXELS_PER_CM - self.center_back[1], -self.theta
         self.final_x, self.final_y = int(self.robot_x*FINAL_SIZE/(
             TABLE_LEN*PIXELS_PER_CM)), int(self.robot_y*FINAL_SIZE/(TABLE_LEN*PIXELS_PER_CM))
+        self.front_mark_x, self.front_mark_y = self.center_front[0], TABLE_LEN * \
+            PIXELS_PER_CM - self.center_front[1]
+        self.front_mark_x, self.front_mark_y = int(self.front_mark_x*FINAL_SIZE/(
+            TABLE_LEN*PIXELS_PER_CM)), int(self.front_mark_y*FINAL_SIZE/(TABLE_LEN*PIXELS_PER_CM))
 
     def __detect_robot_marks(self):
         # front of the robot
@@ -199,6 +224,50 @@ class Vision:
         self.cap.release()
         cv2.destroyAllWindows()
 
+    def closest_color(self, px):
+        r, g, b = px
+        color_diffs = []
+        for color in COLORS:
+            cr, cg, cb = color
+            color_diff = np.sqrt((r - cr)**2 + (g - cg)**2 + (b - cb)**2)
+            color_diffs.append((color_diff, color))
+        return min(color_diffs)[1]
+
+    def get_Image_Color_array(self):
+        if(self.table is None):
+            return
+        try:
+            color_array = (self.table)
+            for i in range(len(color_array)):
+                for j in range(len(color_array[i])):
+                    color_array[i][j] = self.closest_color(color_array[i][j])
+            return color_array
+        except:
+            print("error shwon")
+
+
+    def visualise_dots(self):
+        # front of the robot
+        robot_front = cv2.inRange(
+            self.table, self.color_front[0], self.color_front[1])
+        plt.imshow(robot_front)
+
+        # filter_front = np.ones(
+        #     (int(LM_FRONT*PIXELS_PER_CM), int(LM_FRONT*PIXELS_PER_CM)))
+        # center_front = convolve2d(
+        #     robot_front, filter_front, mode='same', boundary='fill', fillvalue=0)
+        # self.center_front = (np.argmax(self.center_front) % self.center_front.shape[1], np.argmax(
+        #     self.center_front)//self.center_front.shape[1])  # (x,y)
+
+        # back of the robot
+        # robot_back = cv2.inRange(
+        #     self.table, self.color_back[0], self.color_back[1])
+        # filter_back = np.ones(
+        #     (int(LM_BACK*PIXELS_PER_CM), int(LM_BACK*PIXELS_PER_CM)))
+        # self.center_back = convolve2d(
+        #     robot_back, filter_back, mode='same', boundary='fill', fillvalue=0)
+        # self.center_back = (np.argmax(self.center_back) % self.center_back.shape[1], np.argmax(
+        #     self.center_back)//self.center_back.shape[1])
 
 '''
 if __name__ == "__main__":

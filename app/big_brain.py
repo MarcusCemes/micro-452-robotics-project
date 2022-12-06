@@ -2,10 +2,8 @@
 from asyncio import FIRST_COMPLETED, Event, create_task, sleep, wait
 
 import numpy as np
-import numpy.typing as npt
 
-from app.config import (SCENE_THRESHOLD, SLEEP_INTERVAL, SUBDIVISIONS,
-                        USE_EXTERNAL_CAMERA, USE_LIVE_CAMERA)
+from app.config import *
 from app.context import Context
 from app.filtering import Filtering
 from app.global_navigation import GlobalNavigation
@@ -16,6 +14,8 @@ from app.server import setFilteringModule
 from app.utils.console import *
 from app.vision import Vision
 from app.christmas import Second_thymio
+
+POSITION_THRESHOLD = 0.5
 
 class BigBrain:
 
@@ -36,9 +36,10 @@ class BigBrain:
                 GlobalNavigation(self.ctx) as global_nav, \
                 LocalNavigation(self.ctx, motion_control) as local_nav:
 
+            vision = Vision(self.ctx, external=USE_EXTERNAL_CAMERA, live=USE_LIVE_CAMERA)
+
             await self.loop(
-                Vision(self.ctx, external=USE_EXTERNAL_CAMERA,
-                       live=USE_LIVE_CAMERA),
+                vision,
                 filtering,
                 motion_control,
                 global_nav,
@@ -88,14 +89,21 @@ class BigBrain:
         vision.calibrate()
 
         while True:
-            obstacles, posImg, posPhy = vision.update()
-
-            # obstacles[:][:] = 0
+            obstacles, posImg, posPhy, pos2Img, pos2Phy = vision.update()
+            #if orientation and position is too far do not update
+            if self.ctx.state.last_detection != None: 
+                if posPhy[2] < POSITION_THRESHOLD + self.ctx.state.last_orientation and posPhy[2] > self.ctx.state.last_orientation - POSITION_THRESHOLD:
+                    debug("update")
+                    filtering.update(posPhy)
+                    
+            self.ctx.state.last_detection = (posPhy[0], posPhy[1])
+            self.ctx.state.last_detection_2 = (pos2Phy[0], pos2Phy[1])
+            self.ctx.state.last_orientation = posPhy[2]
+            self.ctx.state.changed()
 
             if self.significant_change(obstacles):
                 debug("\\[big brain] Scene changed significantly, updating")
                 # update filtering with camera reading
-                # filtering.update(posPhy)
 
                 self.ctx.state.obstacles = obstacles.tolist()
                 self.ctx.state.changed()
@@ -105,7 +113,7 @@ class BigBrain:
                 await self.second_thymio.drop_baulbe()
                 self.ctx.state.arrived == False
 
-            await sleep(1)
+            await sleep(UPDATE_FREQUENCY)
 
         while True:
 
