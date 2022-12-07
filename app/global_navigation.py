@@ -11,10 +11,10 @@ from app.context import Context
 from app.path_finding.dijkstra import Dijkstra
 from app.path_finding.grid_graph import GridGraph
 from app.path_finding.types import Algorithm, Location, Map
-from app.path_finding.utils import clamp
 from app.state import ObstacleQuad
 from app.utils.background_task import BackgroundTask
 from app.utils.console import *
+from app.utils.math import clamp
 from app.utils.types import Vec2
 
 

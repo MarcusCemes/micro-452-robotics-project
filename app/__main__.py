@@ -1,4 +1,5 @@
 from asyncio import create_task, run, sleep
+from sys import version_info
 
 import numpy as np
 from rich.padding import Padding
@@ -12,11 +13,14 @@ from app.parallel import Pool
 from app.server import Server
 from app.state import State
 from app.utils.console import *
-from app.vision import close_capture_source
+
+VERSION_MAJOR = 3
+VERSION_MINOR = 10
 
 
 def main():
     print_banner()
+    check_version()
 
     if RAISE_DEPRECATION_WARNINGS:
         np.warnings.filterwarnings(  # type: ignore
@@ -33,7 +37,6 @@ def main():
         console.print_exception()
 
     finally:
-        close_capture_source()
         print("")
 
 
@@ -49,6 +52,20 @@ def print_banner():
         ), justify="left")
 
 
+def check_version():
+    (major, minor, _, _, _) = version_info
+    if major < VERSION_MAJOR or minor < VERSION_MINOR:
+        console.print("\n".join(
+            [
+                "[bold red]Python version not supported![/]",
+                f"This project uses features from Python {VERSION_MAJOR}.{VERSION_MINOR}",
+                f"You have version {major}.{minor}\n"
+            ]
+        ))
+
+        exit(1)
+
+
 async def init():
     status = console.status(
         "Connecting to Thymio driver", spinner_style="cyan")
@@ -59,7 +76,6 @@ async def init():
         with Pool() as pool:
             with ClientAsync() as client:
                 status.update("Waiting for Thymio node")
-                debug(client.nodes)
                 with await client.lock() as node:
 
                     info("Principal node connected")
@@ -105,8 +121,7 @@ async def init():
 
                         async with Server(ctx):
                             brain = BigBrain(ctx)
-                            await brain.start_thinking()    
-                
+                            await brain.start_thinking()
 
     except ConnectionRefusedError:
         warning("Thymio driver connection refused")

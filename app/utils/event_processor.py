@@ -17,8 +17,6 @@ class ThymioEventProcessor:
         run = getattr(self, "run", None)
         self._task = create_task(run()) if callable(run) else None
 
-        return self
-
     def __exit__(self, *_):
         self.ctx.node.remove_variables_changed_listener(
             self._on_variables_changed)
