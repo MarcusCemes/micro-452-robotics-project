@@ -74,7 +74,7 @@ class ExtendedKalmanFilter(object):
 
         self.Q = np.array([[1, 0, 0],
                            [0, 1, 0],
-                           [0, 0, 1]], dtype="f")  # valeurs uniquement sur la diag, les bruits sont indépendants
+                           [0, 0, 0.1]], dtype="f")  # valeurs uniquement sur la diag, les bruits sont indépendants
 
         self.R = np.array([[1, 0, 0],
                            [0, 1, 0],
@@ -145,16 +145,17 @@ class ExtendedKalmanFilter(object):
 
         return E: estimated state
         """
-        # WHERE DOES ORIENTATION APPEARS---------------------------------------------------------------------------------------------------------------
         # innovation covariance
         S = np.dot(self.H, np.dot(self.P, self.H.T))+self.R
         # kalman gain
         K = np.dot(np.dot(self.P, self.H.T), np.linalg.inv(S))
 
         # Correction / innovation
-        self.E: Any = np.round(
-            self.E+np.dot(K, (z.T-np.dot(self.H, self.E))))
+        self.E = self.E+np.dot(K, (z.T-np.dot(self.H, self.E)))
+        if (abs(self.E[2]) > math.pi):
+            self.E[2] = - 2*np.sign(self.E[2])*math.pi + self.E[2]
+
         I = np.eye(self.H.shape[1])
-        self.P = (I-(K*self.H))*self.P
+        self.P = np.dot((I-(K*self.H)),self.P)
 
         return self.E[0].item(), self.E[1].item(), self.E[2].item()
