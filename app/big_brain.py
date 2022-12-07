@@ -14,6 +14,8 @@ from app.motion_control import MotionControl
 from app.path_finding.types import Map
 from app.server import setFilteringModule
 from app.utils.console import *
+from app.utils.outlier_rejecter import OutlierRejecter
+from app.utils.types import Coords, Vec2
 from app.vision import Vision
 
 POSITION_THRESHOLD = 0.5
@@ -75,19 +77,32 @@ class BigBrain:
 
         modules.vision.calibrate()
 
+        back_rejecter = OutlierRejecter[Vec2](2, 5)
+        front_rejecter = OutlierRejecter[Vec2](2, 5)
+        orientation_rejecter = OutlierRejecter[float](0.1, 5)
+
+        await self.ctx.node.set_variables({
+            "motor.left.target": [50],
+            "motor.right.target": [-50],
+        })
+
         while True:
             obs = modules.vision.next()
 
             if obs:
+                back = back_rejecter.next(obs.back)
+                front = front_rejecter.next(obs.front)
+                orientation = orientation_rejecter.next(obs.orientation)
+
                 # if orientation and position is too far do not update
                 # if self.ctx.state.last_detection != None:
                 #     if obs.orientation < POSITION_THRESHOLD + self.ctx.state.last_orientation and obs.orientation > self.ctx.state.last_orientation - POSITION_THRESHOLD:
                 #         debug("update")
                 #         modules.filtering.update(obs.back)
 
-                self.ctx.state.last_detection = obs.back
-                self.ctx.state.last_detection_2 = obs.front
-                self.ctx.state.last_orientation = obs.orientation
+                self.ctx.state.last_detection = back
+                self.ctx.state.last_detection_2 = front
+                self.ctx.state.last_orientation = orientation
 
                 if self.significant_change(obs.obstacles):
                     debug("\\[big brain] Scene changed significantly, updating")
@@ -103,7 +118,7 @@ class BigBrain:
 
             # await sleep(UPDATE_FREQUENCY)
             self.ctx.debug_update = False
-            await sleep(1)
+            await sleep(0.1)
 
         # while True:
 

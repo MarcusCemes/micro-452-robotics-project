@@ -22,7 +22,7 @@ ColourRange = tuple[Colour, Colour]
 
 BILATERAL_SIGMA = 75
 CALIBRATE_NAMED_WINDOW = "Vision calibration"
-COLOUR_DELTA = 32
+COLOUR_DELTA = 24
 TEST_IMAGE_PATH = "assets/test_frame_01.jpg"
 THRESHOLD = 128
 WAIT_KEY_INTERVAL_MS = 100
