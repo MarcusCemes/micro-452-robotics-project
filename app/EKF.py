@@ -76,9 +76,9 @@ class ExtendedKalmanFilter(object):
                            [0, 1, 0],
                            [0, 0, 0.1]], dtype="f")  # valeurs uniquement sur la diag, les bruits sont indépendants
 
-        self.R = np.array([[1, 0, 0],
-                           [0, 1, 0],
-                           [0, 0, 1]], dtype="f")  # bruit de la caméra, peut-être donné par le constructeur.  sinon tuner
+        self.R = np.array([[0.1, 0, 0],
+                           [0, 0.1, 0],
+                           [0, 0, 0.01]], dtype="f")  # bruit de la caméra, peut-être donné par le constructeur.  sinon tuner
 
         self.P = np.eye(self.A.shape[1])
 
@@ -100,7 +100,7 @@ class ExtendedKalmanFilter(object):
         speed_forward = (speedL+speedR)/2.0
         speed_rotation = (speedR-speedL)/DIAMETER
         # debug("sf: "+str(speed_forward)+" sr: "+str(speed_rotation))
-        self.U = np.matrix([speed_forward, speed_rotation]).T
+        self.U = np.array([speed_forward, speed_rotation]).T
 
     def update_G(self):
         """ 
