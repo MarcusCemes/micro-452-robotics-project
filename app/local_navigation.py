@@ -33,7 +33,6 @@ class LocalNavigation(ThymioEventProcessor):
         self.ctx = ctx
         self.motion_control = motion_control
 
-        self.map = np.array((SUBDIVISIONS, SUBDIVISIONS), dtype=bool)
         self.last_time = time()
 
     # == Implemented methods == #
@@ -83,7 +82,12 @@ class LocalNavigation(ThymioEventProcessor):
             if (relativeWalls[i] != None):
                 globalPos = self.wayPointPerceivedToReal(relativeWalls[i])
                 indexes = globalPos/PIXELS_PER_CM
-                self.map[int(indexes[0])][int(indexes[1])] = True
+                try:
+                    if self.ctx.state.obstacles is not None:
+                        self.ctx.state.obstacles[int(
+                            indexes[0])][int(indexes[1])] = 1
+                except:
+                    print("detected wall outside of scope")
 
     def rotate(self, angle, coords):
         R = np.array([[np.cos(angle), -np.sin(angle)],

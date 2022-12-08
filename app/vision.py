@@ -356,7 +356,7 @@ class Vision:
         # Flip the y axis
         y = IMAGE_PROCESSING_DIM - y
 
-        factor = PHYSICAL_SIZE_CM / IMAGE_PROCESSING_DIM
+        factor = float(PHYSICAL_SIZE_CM) / float(IMAGE_PROCESSING_DIM)
         return x * factor, y * factor
 
     # == Utilities == #

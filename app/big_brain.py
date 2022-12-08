@@ -90,9 +90,10 @@ class BigBrain:
             obs = modules.vision.next()
 
             if obs:
-                back = back_rejecter.next(obs.back)
-                front = front_rejecter.next(obs.front)
-                orientation = orientation_rejecter.next(obs.orientation)
+                back, back_updated = back_rejecter.next(obs.back)
+                front, front_updated = front_rejecter.next(obs.front)
+                orientation, orientation_updated = orientation_rejecter.next(
+                    obs.orientation)
 
                 # if orientation and position is too far do not update
                 # if self.ctx.state.last_detection != None:
@@ -103,6 +104,7 @@ class BigBrain:
                 self.ctx.state.last_detection = back
                 self.ctx.state.last_detection_2 = front
                 self.ctx.state.last_orientation = orientation
+                self.ctx.state.changed()
 
                 if self.significant_change(obs.obstacles):
                     debug("\\[big brain] Scene changed significantly, updating")

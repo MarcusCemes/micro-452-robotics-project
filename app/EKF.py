@@ -86,6 +86,7 @@ class ExtendedKalmanFilter(object):
         """ 
         Updates B matrix
         """
+        print(self.E[2])
         self.B = np.array([[math.cos(self.E[2])*dt, 0],
                            [math.sin(self.E[2])*dt, 0],
                            [0, dt]], dtype="f")
@@ -123,6 +124,7 @@ class ExtendedKalmanFilter(object):
         """
 
         # updates the matrices B,U,G
+        print(dt)
         self.update_B(dt)
         self.update_U(speedL, speedR)
         self.update_G()
@@ -152,10 +154,11 @@ class ExtendedKalmanFilter(object):
 
         # Correction / innovation
         self.E = self.E+np.dot(K, (z.T-np.dot(self.H, self.E)))
+
         if (abs(self.E[2]) > math.pi):
             self.E[2] = - 2*np.sign(self.E[2])*math.pi + self.E[2]
 
         I = np.eye(self.H.shape[1])
-        self.P = np.dot((I-(K*self.H)),self.P)
+        self.P = np.dot((I-np.dot(K, self.H)), self.P)
 
         return self.E[0].item(), self.E[1].item(), self.E[2].item()

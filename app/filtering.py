@@ -17,8 +17,7 @@ class Filtering(ThymioEventProcessor):
         super().__init__(ctx)
 
         self.on_update = Event()
-        self.last_update = time()
-        self.predict_counter = 0
+        self.last_update = None
 
         self.ekf = ExtendedKalmanFilter(
             (PHYSICAL_SIZE_CM/2, PHYSICAL_SIZE_CM/2),  math.pi/2)
@@ -41,14 +40,18 @@ class Filtering(ThymioEventProcessor):
         self.ctx.state.changed()
 
     def predict(self, vl, vr):
+        if self.last_update is None:
+            self.last_update = time()
+            return
 
         # solution bricolage
-        if self.predict_counter == 0:
-            self.last_update = time()
+        # if self.predict_counter == 0:
+            # self.last_update = time()
         now = time()
         dt = now - self.last_update
-        #print("prediction number: " + str(self.predict_counter))
-        #print(" dt = " + str(dt))
+        print("dt " + str(dt))
+        # print("prediction number: " + str(self.predict_counter))
+        # print(" dt = " + str(dt))
         # debug(f"Update number: {self.predict_counter}")
         # if dt>DT_THRESHOLD:
         #   return
@@ -60,9 +63,9 @@ class Filtering(ThymioEventProcessor):
         self.ctx.state.orientation = orientation_est
 
         self.last_update = now
-        self.predict_counter += 1
+        # self.predict_counter += 1
 
-        #print("x = " + str(pose_x_est) + " y =" + str(pose_y_est))
+        # print("x = " + str(pose_x_est) + " y =" + str(pose_y_est))
 
     def update(self, pose):  # from vision
         debug("👮‍♂️ Bad man! Called updated, don't do that!")
