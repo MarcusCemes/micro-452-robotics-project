@@ -33,7 +33,7 @@ class MotionControl(BackgroundTask):
         index = min(self.ctx.state.next_waypoint_index +
                     indexMore, len(self.ctx.state.path)-1)
 
-        print(index)
+        # print(index)
         if (index == -1):
             return
         if self.ctx.state.path[index] is None:
@@ -96,8 +96,11 @@ class MotionControl(BackgroundTask):
 
         vForward = 0
 
-        if (abs(dAngle) < 10*math.pi/180):
-            vForward = max(dDist, 4)*5
+        if (abs(dAngle) < 45*math.pi/180):
+            if (abs(dAngle) < 10*math.pi/180):
+                vForward = max(dDist, 4)*5
+            else:
+                vForward = max(dDist, 4)*1
         vAngle = dAngle*80
         temp = abs(vAngle)
         temp = min(temp, 50)

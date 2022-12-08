@@ -20,7 +20,7 @@ class Filtering(ThymioEventProcessor):
         self.last_update = None
 
         self.ekf = ExtendedKalmanFilter(
-            (PHYSICAL_SIZE_CM/2, PHYSICAL_SIZE_CM/2),  math.pi/2)
+            (PHYSICAL_SIZE_CM/2, PHYSICAL_SIZE_CM/2),  math.pi)
 
     def process_event(self, variables):
         """
@@ -40,16 +40,19 @@ class Filtering(ThymioEventProcessor):
         self.ctx.state.changed()
 
     def predict(self, vl, vr):
+
+        debug("predict")
+
         if self.last_update is None:
             self.last_update = time()
             return
 
         # solution bricolage
         # if self.predict_counter == 0:
-            # self.last_update = time()
+        # self.last_update = time()
         now = time()
         dt = now - self.last_update
-        print("dt " + str(dt))
+
         # print("prediction number: " + str(self.predict_counter))
         # print(" dt = " + str(dt))
         # debug(f"Update number: {self.predict_counter}")
@@ -70,6 +73,8 @@ class Filtering(ThymioEventProcessor):
     def update(self, pose):  # from vision
         debug("👮‍♂️ Bad man! Called updated, don't do that!")
         # filter recomputation and context update
+
+        self.ekf.predict_ekf(0,0,0.01)
 
         z = np.array([pose])
         pose_x_est, pose_y_est, orientation_est = self.ekf.update_ekf(z)

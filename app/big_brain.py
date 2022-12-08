@@ -18,6 +18,8 @@ from app.utils.outlier_rejecter import OutlierRejecter
 from app.utils.types import Coords, Vec2
 from app.vision import Vision
 
+import math
+
 POSITION_THRESHOLD = 0.5
 
 
@@ -81,10 +83,10 @@ class BigBrain:
         front_rejecter = OutlierRejecter[Vec2](2, 5)
         orientation_rejecter = OutlierRejecter[float](0.1, 5)
 
-        await self.ctx.node.set_variables({
-            "motor.left.target": [50],
-            "motor.right.target": [-50],
-        })
+        # await self.ctx.node.set_variables({
+        #     "motor.left.target": [50],
+        #     "motor.right.target": [-50],
+        # })
 
         while True:
             obs = modules.vision.next()
@@ -94,6 +96,12 @@ class BigBrain:
                 front, front_updated = front_rejecter.next(obs.front)
                 orientation, orientation_updated = orientation_rejecter.next(
                     obs.orientation)
+                orientation_2 = self.ctx.state.orientation
+                #print("orientation from state: " + str(orientation_2))
+                #print("orientation from camera: " + str(orientation))
+
+                #debug("update")
+                modules.filtering.update((obs.back[0], obs.back[1], orientation))
 
                 # if orientation and position is too far do not update
                 # if self.ctx.state.last_detection != None:

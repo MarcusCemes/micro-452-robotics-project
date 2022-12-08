@@ -86,7 +86,6 @@ class ExtendedKalmanFilter(object):
         """ 
         Updates B matrix
         """
-        print(self.E[2])
         self.B = np.array([[math.cos(self.E[2])*dt, 0],
                            [math.sin(self.E[2])*dt, 0],
                            [0, dt]], dtype="f")
@@ -101,7 +100,7 @@ class ExtendedKalmanFilter(object):
         speed_forward = (speedL+speedR)/2.0
         speed_rotation = (speedR-speedL)/DIAMETER
         # debug("sf: "+str(speed_forward)+" sr: "+str(speed_rotation))
-        self.U = np.array([speed_forward, speed_rotation]).T
+        self.U = np.array([[speed_forward], [speed_rotation]])
 
     def update_G(self):
         """ 
@@ -122,15 +121,14 @@ class ExtendedKalmanFilter(object):
 
         return E: estimated state
         """
-
         # updates the matrices B,U,G
-        print(dt)
         self.update_B(dt)
         self.update_U(speedL, speedR)
         self.update_G()
 
         # computes estimation
         self.E = np.dot(self.A, self.E) + np.dot(self.B, self.U)
+
         # Calcul de la covariance de l'erreur
         self.P = np.dot(np.dot(self.G, self.P), self.G.T)+self.Q
 

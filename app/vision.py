@@ -348,6 +348,7 @@ class Vision:
 
     def _angle(self, p1: Coords, p2: Coords) -> float:
         """Returns the angle of the vector between two points in radians."""
+        
         return atan2(p2[1]-p1[1], p2[0]-p1[0])
 
     def _to_physical_space(self, coords: Coords) -> Vec2:
@@ -357,6 +358,7 @@ class Vision:
         y = IMAGE_PROCESSING_DIM - y
 
         factor = float(PHYSICAL_SIZE_CM) / float(IMAGE_PROCESSING_DIM)
+        #factor= 1/float(PIXELS_PER_CM)
         return x * factor, y * factor
 
     # == Utilities == #
