@@ -6,6 +6,7 @@ from typing import Callable
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
 from scipy.signal import convolve2d
 
 from app.config import *
@@ -310,28 +311,33 @@ class Vision:
 
         # 8-bit space can overflow when convolving, so we use 64-bit
         threshold_64 = threshold.astype(np.int64)
-        kernel = self._landmark_kernal(size)
 
-        convolution = convolve2d(threshold_64, kernel,
-                                 mode='same', boundary='fill', fillvalue=0)
+        convolution = convolve2d(
+            threshold_64,
+            self._landmark_kernel(size),
+            mode='same',
+            boundary='fill',
+            fillvalue=0
+        )
 
         if axs is not None:
             axs[0].imshow(threshold, cmap="gray")
-            axs[1].imshow(convolution, cmap="plasma")
+            axs[1].imshow(convolution, cmap="gray")
 
         return convolution
 
-    def _landmark_kernal(self, size: float) -> np.ndarray:
+    def _landmark_kernel(self, size: float) -> npt.NDArray[np.uint64]:
         """Generates a circular kernel for the given landmark size."""
 
-        kernal_dim = int(size * PIXELS_PER_CM)
-        R2 = kernal_dim ** 2
+        disc_radius = int(size * PIXELS_PER_CM)
+        kernal_dim = 2 * disc_radius + 1
+        R2 = disc_radius ** 2
 
         kernel = np.zeros((kernal_dim, kernal_dim), np.uint64)
 
         for i in range(kernal_dim):
             for j in range(kernal_dim):
-                if (i - kernal_dim) ** 2 + (j - kernal_dim) ** 2 <= R2:
+                if (disc_radius - i) ** 2 + (disc_radius - j) ** 2 <= R2:
                     kernel[i, j] = 1
 
         return kernel

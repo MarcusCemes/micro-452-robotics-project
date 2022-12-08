@@ -12,22 +12,22 @@ class OutlierRejecter(Generic[T]):
 
         self._last_value = None
 
-    def next(self, value: T) -> T:
+    def next(self, value: T) -> tuple[T, bool]:
         if self._last_value is None:
             self._last_value = value
-            return value
+            return value, True
 
         if self._distance(value, self._last_value) <= self.threshold:
             self._last_value = value
-            return value
+            return value, True
 
         self.misses += 1
 
         if self.max_mises is not None and self.misses >= self.max_mises:
             self.max_mises = 0
-            return value
+            return value, True
 
-        return self._last_value
+        return self._last_value, False
 
     def reset(self):
         self.misses = 0
