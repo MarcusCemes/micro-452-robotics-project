@@ -136,10 +136,11 @@ async def handle_message(msg: Any, ws: WebSocketResponse, ctx: Context):
 
 def stop_all(ctx: Context):
     for node in [ctx.node, ctx.node_top]:
-        node.send_set_variables({
-            "motor.left.target": [0],
-            "motor.right.target": [0],
-        })
+        if node != None:
+            node.send_set_variables({
+                "motor.left.target": [0],
+                "motor.right.target": [0],
+            })
 
     critical("Emergency stop!")
     exit()

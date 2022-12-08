@@ -61,7 +61,9 @@ class LocalNavigation(ThymioEventProcessor):
         distances = np.array(self.ctx.state.relative_distances)
         distances = distances[distances != -1]
         if (len(distances) > 0 and self.ctx.state.reactive_control == False):
+            print("hohoooooo")
             if (distances.min() < 3.5):
+                print("helllooo")
                 self.ctx.state.reactive_control = True
                 self.last_time = time()
                 return

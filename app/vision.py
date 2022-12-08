@@ -23,8 +23,9 @@ ColourRange = tuple[Colour, Colour]
 
 BILATERAL_SIGMA = 75
 CALIBRATE_NAMED_WINDOW = "Vision calibration"
-COLOUR_DELTA = 24
+COLOUR_DELTA = 32
 TEST_IMAGE_PATH = "assets/test_frame_01.jpg"
+QR_CODE_PATH = "assets/qr_code.png"
 THRESHOLD = 128
 WAIT_KEY_INTERVAL_MS = 100
 
@@ -43,7 +44,6 @@ class Observation:
     obstacles: Map
     back: Vec2
     front: Vec2
-    orientation: float
 
 
 class Step(Enum):
@@ -131,6 +131,7 @@ class Vision:
         # Generate the perspective transform
         src = np.array(self.pts_src)
         dst = np.array(self._homoDstPoints())
+        debug(f"Source points: {src}")
         self.perspective_correction, _ = cv2.findHomography(src, dst)
 
         info("Calibration complete!")
@@ -182,13 +183,15 @@ class Vision:
         obstacles = self._find_obstacles(map)
         back, front = self._find_landmarks(map)
 
+        if back == None or front == None:
+            debug("Could not find landmarks!")
+            return None
+
         if self.ax is not None:
             self.ax[0][0].imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
             self.ax[1][0].imshow(cv2.cvtColor(map, cv2.COLOR_BGR2RGB))
             self.ax[1][0].plot(back[1], back[0], "ro")
             self.ax[1][0].plot(front[1], front[0], "bo")
-
-        orientation = -self._angle(back, front)
 
         if self.ax is not None:
             plt.show()
@@ -198,7 +201,6 @@ class Vision:
             obstacles,  # type: ignore
             self._to_physical_space(back),
             self._to_physical_space(front),
-            orientation
         )
 
     def _read_image(self) -> Image | None:
@@ -225,7 +227,7 @@ class Vision:
             self._normalise,
         ])
 
-    def _find_landmarks(self, map: Image) -> tuple[Coords, Coords]:
+    def _find_landmarks(self, map: Image) -> tuple[Coords | None, Coords | None]:
         if self.ax is not None:
             ax = self.ax[:, 1:3]  # type: ignore
         else:
@@ -242,9 +244,15 @@ class Vision:
         colour: Colour,
         size: float,
         axs: list[plt.Axes] | None
-    ) -> Coords:
+    ) -> Coords | None:
         convolution = self._isolate_landmark(convolution, colour, size, axs)
-        return self._get_maximum(convolution)
+        (x, y) = self._get_maximum(convolution)
+
+        if convolution[x, y] < 10:
+            return None
+
+        offset = int(0.35 * size * PIXELS_PER_CM)
+        return (x + offset, y + offset)
 
     # == Image processing functions == #
 
@@ -291,7 +299,8 @@ class Vision:
         resized = cv2.resize(obstacles, dsize=(SUBDIVISIONS, SUBDIVISIONS))
 
         # Flip the image vertically to match the robot's coordinate system
-        return cv2.flip(resized, 0)
+        # return cv2.flip(resized, 1)
+        return cv2.rotate(resized, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
     def _normalise(self, image: Image, threshold=THRESHOLD) -> Image:
         """Normalises the image to 0 and 1 values, based on a threshold level."""
@@ -345,11 +354,6 @@ class Vision:
     def _get_maximum(self, map: Image) -> tuple[int, int]:
         max = np.argmax(map, axis=None)
         return np.unravel_index(max, map.shape)  # type: ignore
-
-    def _angle(self, p1: Coords, p2: Coords) -> float:
-        """Returns the angle of the vector between two points in radians."""
-        
-        return atan2(p2[1]-p1[1], p2[0]-p1[0])
 
     def _to_physical_space(self, coords: Coords) -> Vec2:
         x, y = coords

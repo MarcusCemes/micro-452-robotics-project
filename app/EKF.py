@@ -1,5 +1,4 @@
 import math
-from typing import Any
 
 import numpy as np
 from numpy import typing as npt
@@ -8,8 +7,6 @@ from numpy import typing as npt
 from app.utils.console import *
 
 from app.config import DIAMETER
-
-""" THIS IS A NEW VERSION OF THE FILTER KALMAN.PY AND FILTERING:PY ARE OBSELETE """
 
 
 class ExtendedKalmanFilter(object):

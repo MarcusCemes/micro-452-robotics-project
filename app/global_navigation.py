@@ -49,21 +49,19 @@ class GlobalNavigation(BackgroundTask):
         self.ctx.state.nodes = graph.nodes
         self.ctx.state.changed()
 
-        if(self.computedOnce == False):
-            self.computedOnce = True
-            algo = Dijkstra(graph, self.ctx.state.optimise)
-            start = self._to_location(start)
-            end = self._to_location(end)
+        algo = Dijkstra(graph, self.ctx.state.optimise)
+        start = self._to_location(start)
+        end = self._to_location(end)
 
-            path, time = await self.ctx.pool.run(profile_algo, start, end, algo)
+        path, time = await self.ctx.pool.run(profile_algo, start, end, algo)
 
-            if path is not None:
-                path = self._path_to_coords(path)
-            
-            self.ctx.state.path = path
-            self.ctx.state.computation_time = time
-            self.ctx.state.next_waypoint_index = 0
-            self.ctx.state.changed()
+        if path is not None:
+            path = self._path_to_coords(path)
+
+        self.ctx.state.path = path
+        self.ctx.state.computation_time = time
+        self.ctx.state.next_waypoint_index = 0
+        self.ctx.state.changed()
 
         return True
 

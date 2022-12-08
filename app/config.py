@@ -27,7 +27,7 @@ PIXELS_PER_CM = 5   # number of pixels in each cm
 TABLE_LEN = 58      # size in cm of the table
 LM_FRONT = 2.8      # diameter of the front landmark in cm
 LM_BACK = 3.0      # diameter of the back landmark in cm
-SAFE_DISTANCE = 10   # distance from the hole of the robot until the further point in cm
+SAFE_DISTANCE = 15   # distance from the hole of the robot until the further point in cm
 
 # == Second Thymio == #
 DROP_SPEED = 50     # speed of the motors to drop the bauble

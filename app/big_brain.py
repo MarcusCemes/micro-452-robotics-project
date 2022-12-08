@@ -92,22 +92,23 @@ class BigBrain:
             obs = modules.vision.next()
 
             if obs:
+                obs_orientation = self._angle(obs.back, obs.front)
+
                 back, back_updated = back_rejecter.next(obs.back)
                 front, front_updated = front_rejecter.next(obs.front)
                 orientation, orientation_updated = orientation_rejecter.next(
-                    obs.orientation)
-                orientation_2 = self.ctx.state.orientation
-                #print("orientation from state: " + str(orientation_2))
-                #print("orientation from camera: " + str(orientation))
+                    obs_orientation)
 
-                #debug("update")
-                modules.filtering.update((obs.back[0], obs.back[1], orientation))
+                # print("orientation from state: " + str(self.ctx.state.orientation))
+                # print("orientation from camera: " + str(orientation))
 
-                # if orientation and position is too far do not update
-                # if self.ctx.state.last_detection != None:
-                #     if obs.orientation < POSITION_THRESHOLD + self.ctx.state.last_orientation and obs.orientation > self.ctx.state.last_orientation - POSITION_THRESHOLD:
-                #         debug("update")
-                #         modules.filtering.update(obs.back)
+                # modules.filtering.update(
+                # (obs.back[0], obs.back[1], orientation))
+                # orientation = self.ctx.state.orientation if self.ctx.state.orientation != None else obs_orientation
+                if obs.back != (0.0, 0.0) and obs.front != (0.0, 0.0):
+                    debug("Updated filtering!")
+                    modules.filtering.update(
+                        (obs.back[0], obs.back[1], orientation))
 
                 self.ctx.state.last_detection = back
                 self.ctx.state.last_detection_2 = front
@@ -119,12 +120,11 @@ class BigBrain:
                     # update filtering with camera reading
 
                     self.ctx.state.obstacles = obs.obstacles
+                    self.ctx.scene_update.trigger()
 
             if self.ctx.state.arrived == True:
                 await self.second_thymio.drop_baulbe()
                 self.ctx.state.arrived = False
-
-            self.ctx.scene_update.trigger()
 
             # await sleep(UPDATE_FREQUENCY)
             self.ctx.debug_update = False
@@ -152,6 +152,11 @@ class BigBrain:
 
         #     if local_nav.should_freestyle():
         #         await local_nav.freestyle(motion_control)
+
+    def _angle(self, p1: Vec2, p2: Vec2) -> float:
+        """Returns the angle of the vector between two points in radians."""
+
+        return math.atan2(p2[1]-p1[1], p2[0]-p1[0])
 
     def significant_change(self, obstacles: Map) -> bool:
         if self.ctx.state.obstacles is None:

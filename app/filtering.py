@@ -41,8 +41,6 @@ class Filtering(ThymioEventProcessor):
 
     def predict(self, vl, vr):
 
-        debug("predict")
-
         if self.last_update is None:
             self.last_update = time()
             return
@@ -71,10 +69,7 @@ class Filtering(ThymioEventProcessor):
         # print("x = " + str(pose_x_est) + " y =" + str(pose_y_est))
 
     def update(self, pose):  # from vision
-        debug("👮‍♂️ Bad man! Called updated, don't do that!")
-        # filter recomputation and context update
-
-        self.ekf.predict_ekf(0,0,0.01)
+        self.ekf.predict_ekf(0, 0, 0.01)
 
         z = np.array([pose])
         pose_x_est, pose_y_est, orientation_est = self.ekf.update_ekf(z)

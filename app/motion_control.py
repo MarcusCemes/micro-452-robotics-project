@@ -114,6 +114,7 @@ class MotionControl(BackgroundTask):
         return [False, vForward-vAngle, vForward+vAngle]
 
     def controlWithDistance(self):
+        print("panik a bord")
         distances = np.array(self.ctx.state.relative_distances)
         vForward = 20
         vAngle = -3
