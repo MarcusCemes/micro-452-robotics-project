@@ -25,12 +25,16 @@
         dispatch("clear");
     }
 
+    function onDebug() {
+        dispatch("debug");
+    }
+
     function stop() {
         dispatch("stop");
     }
 </script>
 
-<div class="mb-2 flex items-center gap-x-1">
+<div class="mb-2 flex items-center gap-x-1 select-none">
     <IconButton
         on:click={() => setAction("position")}
         active={action === "position"}
@@ -55,6 +59,8 @@
     </IconButton>
 
     <IconButton on:click={toggleOptimise} active={optimise}>🧭</IconButton>
+
+    <IconButton on:click={onDebug}>🐛</IconButton>
 
     <IconButton on:click={stop}>⛔</IconButton>
 </div>

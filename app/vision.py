@@ -1,322 +1,377 @@
-from math import pi
+from dataclasses import dataclass
+from enum import Enum
+from math import atan2
+from typing import Callable
 
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
+import numpy.typing as npt
 from scipy.signal import convolve2d
-import matplotlib as plt
 
 from app.config import *
 from app.context import Context
+from app.path_finding.types import Map
 from app.utils.console import *
+from app.utils.math import clamp
+from app.utils.types import Coords, Vec2
 
+Image = cv2.Mat
+Colour = tuple[int, int, int]
+ColourRange = tuple[Colour, Colour]
+
+
+BILATERAL_SIGMA = 75
+CALIBRATE_NAMED_WINDOW = "Vision calibration"
+COLOUR_DELTA = 24
+TEST_IMAGE_PATH = "assets/test_frame_01.jpg"
 THRESHOLD = 128
+WAIT_KEY_INTERVAL_MS = 100
 
-CALIBRATE_NAMED_WINDOW = "Calibrate camera perspective"
+PIXEL_MIN = 0
+PIXEL_MAX = 255
 
-COLORS = (
-    (35, 35, 35), #BLACK
-    (170, 150, 225), #PINK
-    (60, 125, 50), #GREEN
-    (210, 210, 210), #WHITE
-)
+IMAGE_PROCESSING_DIM = PIXELS_PER_CM * TABLE_LEN
 
-CAPTURE_SOURCE = None
-
-def close_capture_source():
-    if CAPTURE_SOURCE is not None:
-        CAPTURE_SOURCE.release()
-
-class Vision:
-
-    def __init__(self, ctx: Context, external=True, live=False):
-        global CAPTURE_SOURCE
-
-        self.ctx = ctx
-
-        # Create a VideoCapture object and read from input file
-        # If the input is the camera, pass 0 instead of the video file name
-        source = 1 if external else 0
-        self.cap = cv2.VideoCapture(source, cv2.CAP_DSHOW)
-        CAPTURE_SOURCE = self.cap
-
-        # Check if camera opened successfully
-        if (self.cap.isOpened() == False and live == True):
-            print("Error opening video stream or file")
-            exit(-1)
-
-        # create the masks in BGR
-        self.color_obstacles = [(0, 0, 0), (70, 70, 70)]       # black
-        self.color_back = [(150, 100, 200), (210, 160, 255)]   # pink
-        self.color_front = [(30, 100, 30), (80, 150, 70)]        # blue
-        
-
-        self.table_len = PIXELS_PER_CM*TABLE_LEN
-
-        # live video
-        self.live = live
-
-        self.__get_frame()    # init frame
-        self.__create_border_filter()   # init border detection filter
-
-    def __get_frame(self, saved_frame='assets/test_frame_01.jpg'):
-        if self.live == True:
-            ret, self.frame = self.cap.read()
-            if ret == False:
-                exit(-1)
-        else:
-            self.frame = cv2.imread(saved_frame)
-
-    def calibrate(self):
-        self.n_points = 0
-        self.pts_src = np.zeros((4, 2), np.int32)
-
-        pts_dst = np.array([[0, 0], [self.table_len-1, 0],
-                           [self.table_len-1, self.table_len-1], [0, self.table_len-1]])
-
-        if not self.live:
-            self.pts_src = np.array(
-                [[80, 9], [525, 14], [518, 464], [76, 460]])
-        else:
-            self.__get_frame()
-
-            info("Select 4 points to correct perspective (TL, TR, BR, BL)")
-            info("Press N to take a new frame, or Q to exit")
-
-            cv2.imshow(CALIBRATE_NAMED_WINDOW, self.frame)
-            cv2.setMouseCallback(CALIBRATE_NAMED_WINDOW, self.__mouse_callback)
-
-            while self.n_points < 4:
-                key = cv2.waitKey(1)
-
-                if key == ord("q"):
-                    exit(0)
-
-                elif key == ord("n"):
-                    self.pts_src = np.zeros((4, 2), np.int32)
-                    self.n_points = 0
-
-                    self.__get_frame()
-                    cv2.imshow(CALIBRATE_NAMED_WINDOW, self.frame)
-
-            cv2.destroyWindow(CALIBRATE_NAMED_WINDOW)
-
-        # Calculate Homography
-        debug("Selected points:", self.pts_src)
-        self.h, _ = cv2.findHomography(self.pts_src, pts_dst)
-
-    def __mouse_callback(self, event, x, y, flags, params):
-        if event == cv2.EVENT_LBUTTONDOWN and self.n_points < 4:  # Left button click
-            self.pts_src[self.n_points] = x, y
-            self.n_points += 1
-        elif event == cv2.EVENT_RBUTTONDOWN:  # Right button click
-            print(
-                f"coords {x, y}, colors Blue- {self.frame[y, x, 0]} , Green- {self.frame[y, x, 1]}, Red- {self.frame[y, x, 2]} ")
-
-    def update(self):
-        self.__get_frame()
-        self.__focus_table()
-        self.__final_table()
-        
-        self.table = self.get_Image_Color_array()
-        self.__robot_coordinates()
-
-        # degrees to radiants
-        theta_rad = self.theta * pi/180
-        #theta_rad = 0
-
-        return self.table64, (self.final_x, self.final_y, theta_rad), ((self.final_x/FINAL_SIZE)*TABLE_LEN, (self.final_y/FINAL_SIZE)*TABLE_LEN, theta_rad), (self.front_mark_x, self.front_mark_y), ((self.front_mark_x/FINAL_SIZE)*TABLE_LEN, (self.front_mark_y/FINAL_SIZE)*TABLE_LEN)
-
-    def __focus_table(self):
-        self.table = cv2.warpPerspective(
-            self.frame, self.h, (self.table_len, self.table_len))
-        self.table = cv2.bilateralFilter(self.table, PIXELS_PER_CM, 75, 75)
-        self.__erase_noisy_edges()
-
-    def __erase_noisy_edges(self):
-        self.obstacles = cv2.inRange(
-            self.table, self.color_obstacles[0], self.color_obstacles[1])
-        self.obstacles[0:int(PIXELS_PER_CM), :] = 0     # upper margin
-        self.obstacles[:, 0:int(PIXELS_PER_CM)] = 0     # left margin
-        self.obstacles[-int(PIXELS_PER_CM):, :] = 0     # lower margin
-        self.obstacles[:, -int(PIXELS_PER_CM):] = 0     # right margin
-
-    def __create_border_filter(self):
-        # add borders to obstacles
-        radius = int(SAFE_DISTANCE*PIXELS_PER_CM/(2**(1/2)))
-        self.borders = np.zeros((2*radius+1, 2*radius+1))
-        for x in range(self.borders.shape[0]):
-            for y in range(self.borders.shape[1]):
-                if ((x-radius)**2+(y-radius)**2)**(1/2) <= radius:
-                    self.borders[x, y] = 1
-
-    def __final_table(self):
-        # self.__add_borders()
-        # send this information o the next module
-        self.table64 = cv2.flip(cv2.resize(self.obstacles, dsize=(
-            FINAL_SIZE, FINAL_SIZE)), 0)  # changing the referencial on yy
-
-        # Clip values using a threshold value
-        self.table64 = np.where(self.table64 > THRESHOLD, 1, 0)
-
-    def __add_borders(self):
-        # add borders
-        self.obstacles_borders = convolve2d(
-            self.obstacles, self.borders, mode='same', boundary='fill', fillvalue=0)
-        self.obstacles = (255*(self.obstacles_borders > 0)).astype(np.uint8)
-
-    def __robot_coordinates(self):
-        self.__detect_robot_marks()
-        self.__get_angle()
-        self.robot_x, self.robot_y, self.theta = self.center_back[0], TABLE_LEN * \
-            PIXELS_PER_CM - self.center_back[1], -self.theta
-        self.final_x, self.final_y = int(self.robot_x*FINAL_SIZE/(
-            TABLE_LEN*PIXELS_PER_CM)), int(self.robot_y*FINAL_SIZE/(TABLE_LEN*PIXELS_PER_CM))
-        self.front_mark_x, self.front_mark_y = self.center_front[0], TABLE_LEN * \
-            PIXELS_PER_CM - self.center_front[1]
-        self.front_mark_x, self.front_mark_y = int(self.front_mark_x*FINAL_SIZE/(
-            TABLE_LEN*PIXELS_PER_CM)), int(self.front_mark_y*FINAL_SIZE/(TABLE_LEN*PIXELS_PER_CM))
-
-    def __detect_robot_marks(self):
-        # front of the robot
-        robot_front = cv2.inRange(
-            self.table, self.color_front[0], self.color_front[1])
-        filter_front = np.ones(
-            (int(LM_FRONT*PIXELS_PER_CM), int(LM_FRONT*PIXELS_PER_CM)))
-        self.center_front = convolve2d(
-            robot_front, filter_front, mode='same', boundary='fill', fillvalue=0)
-        self.center_front = (np.argmax(self.center_front) % self.center_front.shape[1], np.argmax(
-            self.center_front)//self.center_front.shape[1])  # (x,y)
-
-        # back of the robot
-        robot_back = cv2.inRange(
-            self.table, self.color_back[0], self.color_back[1])
-        filter_back = np.ones(
-            (int(LM_BACK*PIXELS_PER_CM), int(LM_BACK*PIXELS_PER_CM)))
-        self.center_back = convolve2d(
-            robot_back, filter_back, mode='same', boundary='fill', fillvalue=0)
-        self.center_back = (np.argmax(self.center_back) % self.center_back.shape[1], np.argmax(
-            self.center_back)//self.center_back.shape[1])
-
-    def __get_angle(self):
-        # get the coordinates of the robot
-        self.theta = np.arctan((self.center_front[1]-self.center_back[1])/(self.center_front[0]-self.center_back[0]))*180 / \
-            pi if self.center_front[0] != self.center_back[0] else 90 if self.center_front[1] > self.center_back[1] else -90
-
-        # 3rd and 4th quadrant
-        if self.center_front[0] < self.center_back[0]:
-            if self.theta < 0:
-                self.theta += 180              # 4th quadrant
-            else:
-                self.theta -= 180              # 3rd quadrant
-
-    def view(self):
-        cv2.circle(self.obstacles, self.center_front, int(
-            LM_FRONT*PIXELS_PER_CM/2), (255, 255, 255), 2)
-        cv2.circle(self.obstacles, self.center_back, int(
-            LM_BACK*PIXELS_PER_CM/2), (255, 255, 255), 2)
-        dist = 1.8*((self.center_front[0]-self.center_back[0]) **
-                    2+(self.center_front[1]-self.center_back[1])**2)**(1/2)
-        table290 = cv2.arrowedLine(cv2.flip(self.obstacles, 0), (self.robot_x, self.robot_y), (int(
-            self.robot_x+dist*np.cos(self.theta*pi/180)), int(self.robot_y+dist*np.sin(self.theta*pi/180))), (255, 255, 255), 2, tipLength=0.5)
-        cv2.imshow("live view", cv2.flip(table290, 0))
-
-    def __del__(self):
-        self.cap.release()
-        cv2.destroyAllWindows()
-
-    def closest_color(self, px):
-        r, g, b = px
-        color_diffs = []
-        for color in COLORS:
-            cr, cg, cb = color
-            color_diff = np.sqrt((r - cr)**2 + (g - cg)**2 + (b - cb)**2)
-            color_diffs.append((color_diff, color))
-        return min(color_diffs)[1]
-
-    def get_Image_Color_array(self):
-        if(self.table is None):
-            return
-        try:
-            color_array = (self.table)
-            for i in range(len(color_array)):
-                for j in range(len(color_array[i])):
-                    color_array[i][j] = self.closest_color(color_array[i][j])
-            return color_array
-        except:
-            print("error shwon")
-
-
-    def visualise_dots(self):
-        # front of the robot
-        robot_front = cv2.inRange(
-            self.table, self.color_front[0], self.color_front[1])
-        plt.imshow(robot_front)
-
-        # filter_front = np.ones(
-        #     (int(LM_FRONT*PIXELS_PER_CM), int(LM_FRONT*PIXELS_PER_CM)))
-        # center_front = convolve2d(
-        #     robot_front, filter_front, mode='same', boundary='fill', fillvalue=0)
-        # self.center_front = (np.argmax(self.center_front) % self.center_front.shape[1], np.argmax(
-        #     self.center_front)//self.center_front.shape[1])  # (x,y)
-
-        # back of the robot
-        # robot_back = cv2.inRange(
-        #     self.table, self.color_back[0], self.color_back[1])
-        # filter_back = np.ones(
-        #     (int(LM_BACK*PIXELS_PER_CM), int(LM_BACK*PIXELS_PER_CM)))
-        # self.center_back = convolve2d(
-        #     robot_back, filter_back, mode='same', boundary='fill', fillvalue=0)
-        # self.center_back = (np.argmax(self.center_back) % self.center_back.shape[1], np.argmax(
-        #     self.center_back)//self.center_back.shape[1])
-
-'''
-if __name__ == "__main__":
-    Camera = Vision()
-    Camera.calibrate()  # calibrate the image so it focuses on the table
-
-    key = 0
-    while (1):
-        key = cv2.waitKey(1)
-        if key == ord('q'):
-            break
-
-        occupancy_64, coordinates_64, coordinates_cm = Camera.update()
-        Camera.view()
-
-'''
-'''
-from dataclasses import dataclass
-from time import time
-from typing import Any
-
-import numpy as np
-
-from app.context import Context
+COLOUR_OBSTACLE = (35, 35, 35)  # black
 
 
 @dataclass
-class Frame:
-    position: tuple[float, float]
+class Observation:
+    """A class to hold the observation of the environment by vision."""
+
+    obstacles: Map
+    back: Vec2
+    front: Vec2
     orientation: float
-    obstacles: Any
 
 
-class Vision():
+class Step(Enum):
+    Perspective = 0
+    Back = 1
+    Front = 2
+    Done = 3
 
-    def __init__(self, ctx: Context):
+
+class KeyCodes(Enum):
+    Q = ord("q")
+    N = ord("n")
+
+
+class Vision:
+
+    def __init__(
+        self,
+        ctx: Context,
+        external=USE_EXTERNAL_CAMERA,
+        live=USE_LIVE_CAMERA,
+        image_path=TEST_IMAGE_PATH
+    ):
         self.ctx = ctx
-        self.last_update = time()
+        self.external = external
+        self.live = live
+        self.image_path = image_path
 
-    def next_frame(self, subdivisions: int):
-        image = self.capture_image()
-        return self.process_image(image, subdivisions)
+        self.ax = None
 
-    def capture_image(self):
-        # capture image
-        pass
+    def __enter__(self):
+        source = 1 if self.external else 0  # 0 = webcam, 1 = external
+        self.camera = cv2.VideoCapture(source, cv2.CAP_DSHOW)
 
-    def process_image(self, image, subdivisions) -> Frame:
-        # process image
-        obstacles = np.array([subdivisions, subdivisions], dtype=np.int8)
-        return Frame((0, 0), 0, obstacles)
-'''
+        if self.live and not self.camera.isOpened():
+            error("Could not open capture source!")
+            exit(1)
+
+    def __exit__(self, *_):
+        self.camera.release()
+
+    # === Calibration === #
+
+    def calibrate(self):
+        self.calibration_step = Step.Perspective
+        self.pts_src: list[Coords] = []
+
+        image = self._read_image()
+
+        if not Image:
+            raise RuntimeError("Could not read image!")
+
+        info("A GUI window will open to calibrate the vision system")
+        info("Select 4 points to correct perspective (TL, TR, BR, BL)")
+        info("Then select the back landmark, then the front landmark")
+        info("Press N to take a new frame, or Q to exit")
+
+        # Show the captured frame in a GUI window
+        def handler(event, x, y, *_):
+            return self._handle_click(event, x, y, image)
+
+        cv2.imshow(CALIBRATE_NAMED_WINDOW, image)
+        cv2.setMouseCallback(CALIBRATE_NAMED_WINDOW, handler)
+
+        # Allow OpenCV to process GUI events
+        while self.calibration_step != Step.Done:
+            match cv2.waitKey(WAIT_KEY_INTERVAL_MS):
+                case KeyCodes.Q.value:
+                    exit()
+
+                case KeyCodes.N.value:
+                    self.pts_src = []
+                    self.calibration_step = Step.Perspective
+                    image = self._read_image()
+                    cv2.imshow(CALIBRATE_NAMED_WINDOW, image)
+
+            if cv2.getWindowProperty(CALIBRATE_NAMED_WINDOW, cv2.WND_PROP_VISIBLE) < 1:
+                info("Calibration window closed, exiting...")
+                exit()
+
+        # Close the GUI window
+        cv2.destroyWindow(CALIBRATE_NAMED_WINDOW)
+        self.calibration_image = None
+
+        # Generate the perspective transform
+        src = np.array(self.pts_src)
+        dst = np.array(self._homoDstPoints())
+        self.perspective_correction, _ = cv2.findHomography(src, dst)
+
+        info("Calibration complete!")
+
+    def _handle_click(self, event, x, y, image):
+        match event:
+
+            case cv2.EVENT_RBUTTONDOWN:
+                colours = tuple(image[y, x])
+                info(f"Sampled pixel: (x,y) = {(x,y)}, (B,G,R) = {colours}")
+
+            case cv2.EVENT_LBUTTONDOWN:
+                match self.calibration_step:
+                    case Step.Perspective:
+                        self.pts_src.append((x, y))
+                        if len(self.pts_src) == 4:
+                            self.calibration_step = Step.Back
+
+                    case Step.Back:
+                        self.back_colour = image[y, x]
+                        self.calibration_step = Step.Front
+
+                    case Step.Front:
+                        self.front_colour = image[y, x]
+                        self.calibration_step = Step.Done
+
+                    case Step.Done:
+                        pass
+
+                    case _:
+                        raise RuntimeError(f"Unexpected calibration step!")
+
+    def _homoDstPoints(self):
+        l = IMAGE_PROCESSING_DIM - 1
+        return [[0, 0], [l, 0], [l, l], [0, l]]
+
+    # === Updates === #
+
+    def next(self) -> Observation | None:
+        image = self._read_image()
+
+        if image is None:
+            return None
+
+        if self.ctx.debug_update:
+            _, self.ax = plt.subplots(2, 3)
+
+        map = self._process_image(image)
+        obstacles = self._find_obstacles(map)
+        back, front = self._find_landmarks(map)
+
+        if self.ax is not None:
+            self.ax[0][0].imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
+            self.ax[1][0].imshow(cv2.cvtColor(map, cv2.COLOR_BGR2RGB))
+            self.ax[1][0].plot(back[1], back[0], "ro")
+            self.ax[1][0].plot(front[1], front[0], "bo")
+
+        orientation = -self._angle(back, front)
+
+        if self.ax is not None:
+            plt.show()
+            self.ax = None
+
+        return Observation(
+            obstacles,  # type: ignore
+            self._to_physical_space(back),
+            self._to_physical_space(front),
+            orientation
+        )
+
+    def _read_image(self) -> Image | None:
+        if self.live:
+            ret, image = self.camera.read()
+            return image if ret else None
+
+        else:
+            return cv2.imread(self.image_path)  # type: ignore
+
+    # == Image processing == #
+
+    def _process_image(self, image: Image) -> Image:
+        return self._apply_functions(image, [
+            self._map_image,
+            self._denoise,
+            self._remove_borders,
+        ])
+
+    def _find_obstacles(self, map: Image) -> Image:
+        return self._apply_functions(map, [
+            self._isolate_obstacles,
+            self._generate_obstacle_grid,
+            self._normalise,
+        ])
+
+    def _find_landmarks(self, map: Image) -> tuple[Coords, Coords]:
+        if self.ax is not None:
+            ax = self.ax[:, 1:3]  # type: ignore
+        else:
+            ax = (None, None)
+
+        back = self._find_landmark(map, self.back_colour, LM_BACK, ax[0])
+        front = self._find_landmark(map, self.front_colour, LM_FRONT, ax[1])
+
+        return (back, front)
+
+    def _find_landmark(
+        self,
+        convolution: Image,
+        colour: Colour,
+        size: float,
+        axs: list[plt.Axes] | None
+    ) -> Coords:
+        convolution = self._isolate_landmark(convolution, colour, size, axs)
+        return self._get_maximum(convolution)
+
+    # == Image processing functions == #
+
+    def _map_image(self, image: Image) -> Image:
+        """
+        Corrects the perspective of the image, resizing it to the
+        desired image processing dimensions.
+        """
+
+        return cv2.warpPerspective(
+            image,
+            self.perspective_correction,
+            (IMAGE_PROCESSING_DIM, IMAGE_PROCESSING_DIM)
+        )
+
+    def _denoise(self, image: Image) -> Image:
+        """Simple denoising using a bilateral filter."""
+
+        return cv2.bilateralFilter(
+            image,
+            PIXELS_PER_CM,
+            BILATERAL_SIGMA,
+            BILATERAL_SIGMA
+        )
+
+    def _remove_borders(self, image: Image) -> Image:
+        """Removes the border pixels from the image."""
+
+        size = PIXELS_PER_CM
+        image[0:size, :] = PIXEL_MAX, PIXEL_MAX, PIXEL_MAX
+        image[-size:, :] = PIXEL_MAX, PIXEL_MAX, PIXEL_MAX
+        image[:, 0:size] = PIXEL_MAX, PIXEL_MAX, PIXEL_MAX
+        image[:, -size:] = PIXEL_MAX, PIXEL_MAX, PIXEL_MAX
+        return image
+
+    def _isolate_obstacles(self, image: Image) -> Image:
+        """Extracts pixels that are within the obstacle colour range."""
+
+        dark, light = self._colour_range(COLOUR_OBSTACLE)
+        return cv2.inRange(image, np.array(dark), np.array(light))
+
+    def _generate_obstacle_grid(self, obstacles: Image) -> Image:
+        """Resizes the image to the desired final size and referential."""
+        resized = cv2.resize(obstacles, dsize=(SUBDIVISIONS, SUBDIVISIONS))
+
+        # Flip the image vertically to match the robot's coordinate system
+        return cv2.flip(resized, 0)
+
+    def _normalise(self, image: Image, threshold=THRESHOLD) -> Image:
+        """Normalises the image to 0 and 1 values, based on a threshold level."""
+        return np.where(image > threshold, 1, 0)  # type: ignore
+
+    def _isolate_landmark(
+        self,
+        map: Image,
+        colour: Colour,
+        size: float,
+        axs: list[plt.Axes] | None
+    ) -> Image:
+        """Attempts to isolate a landmark of a given colour and size."""
+
+        dark, light = self._colour_range(colour)
+        threshold = cv2.inRange(map, np.array(dark), np.array(light))
+
+        # 8-bit space can overflow when convolving, so we use 64-bit
+        threshold_64 = threshold.astype(np.int64)
+
+        convolution = convolve2d(
+            threshold_64,
+            self._landmark_kernel(size),
+            mode='same',
+            boundary='fill',
+            fillvalue=0
+        )
+
+        if axs is not None:
+            axs[0].imshow(threshold, cmap="gray")
+            axs[1].imshow(convolution, cmap="gray")
+
+        return convolution
+
+    def _landmark_kernel(self, size: float) -> npt.NDArray[np.uint64]:
+        """Generates a circular kernel for the given landmark size."""
+
+        disc_radius = int(size * PIXELS_PER_CM)
+        kernal_dim = 2 * disc_radius + 1
+        R2 = disc_radius ** 2
+
+        kernel = np.zeros((kernal_dim, kernal_dim), np.uint64)
+
+        for i in range(kernal_dim):
+            for j in range(kernal_dim):
+                if (disc_radius - i) ** 2 + (disc_radius - j) ** 2 <= R2:
+                    kernel[i, j] = 1
+
+        return kernel
+
+    def _get_maximum(self, map: Image) -> tuple[int, int]:
+        max = np.argmax(map, axis=None)
+        return np.unravel_index(max, map.shape)  # type: ignore
+
+    def _angle(self, p1: Coords, p2: Coords) -> float:
+        """Returns the angle of the vector between two points in radians."""
+        return atan2(p2[1]-p1[1], p2[0]-p1[0])
+
+    def _to_physical_space(self, coords: Coords) -> Vec2:
+        x, y = coords
+
+        # Flip the y axis
+        y = IMAGE_PROCESSING_DIM - y
+
+        factor = PHYSICAL_SIZE_CM / IMAGE_PROCESSING_DIM
+        return x * factor, y * factor
+
+    # == Utilities == #
+
+    def _colour_range(self, colour: Colour, delta: int = COLOUR_DELTA) -> ColourRange:
+        """Returns a range of colours around a given colour."""
+        return (self._shift_colour(colour, -delta), self._shift_colour(colour, delta))
+
+    def _shift_colour(self, colour: Colour, delta: int) -> Colour:
+        """Shifts a colour and clamps it to the pixel range."""
+        return tuple(map(lambda x: clamp(x + delta, PIXEL_MIN, PIXEL_MAX), colour))
+
+    def _apply_functions(self, image: Image, functions: list[Callable[[Image], Image]]):
+        """Applies a list of functions to an image in order (pipe operator)."""
+        for function in functions:
+            image = function(image)
+
+        return image

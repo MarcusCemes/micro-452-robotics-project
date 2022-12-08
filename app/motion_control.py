@@ -27,19 +27,16 @@ class MotionControl(BackgroundTask):
         if self.ctx.state.path is None:
             return
         if self.ctx.state.next_waypoint_index == len(self.ctx.state.path)-1:
-            print("arrived")
             self.ctx.state.arrived = True
             return
-        
+
         index = min(self.ctx.state.next_waypoint_index +
                     indexMore, len(self.ctx.state.path)-1)
 
         print(index)
         if (index == -1):
-            print("cant go further")
             return
         if self.ctx.state.path[index] is None:
-            print("is OUT")
             return
 
         self.waypoint = self.ctx.state.path[index]
@@ -55,7 +52,6 @@ class MotionControl(BackgroundTask):
 
     async def update_motor_control(self):
         if self.waypoint is None:
-            print("is null")
             self.setNewWaypoint(1)
 
         # TODO: Calculate the required motor speeds to reach the next waypoint
@@ -72,7 +68,6 @@ class MotionControl(BackgroundTask):
                     return
                 if self.ctx.state.path is None:
                     return
-                print("next waypoint update")
                 self.setNewWaypoint(1)
 
         await self.ctx.node.set_variables(

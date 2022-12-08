@@ -24,7 +24,3 @@ class PriorityQueue(Generic[T]):
 def in_bounds(location: Location, size: tuple[int, int]) -> bool:
     (x, y), (w, h) = location, size
     return 0 <= x < w and 0 <= y < h
-
-
-def clamp(value: int, a: int, b: int) -> int:
-    return max(a, min(value, b))

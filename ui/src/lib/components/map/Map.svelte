@@ -37,6 +37,10 @@
         send("optimise", !optimise);
     }
 
+    function onDebug() {
+        send("debug", null);
+    }
+
     function onStop() {
         send("stop", null);
     }
@@ -108,6 +112,7 @@
     {optimise}
     on:clear={clearObstacles}
     on:optimise={onOptimise}
+    on:debug={onDebug}
     on:stop={onStop}
 />
 

@@ -8,7 +8,6 @@ class BackgroundTask:
 
     def __enter__(self):
         self._task = create_task(self._run())
-        return self
 
     def __exit__(self, *_):
         self._task.cancel()

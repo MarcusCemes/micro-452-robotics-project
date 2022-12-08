@@ -6,9 +6,8 @@ from time import time
 
 from app.context import Context
 from app.motion_control import MotionControl
-from app.utils.background_task import BackgroundTask
 from app.utils.event_processor import ThymioEventProcessor
-from app.config import PIXELS_PER_CM, FINAL_SIZE
+from app.config import PIXELS_PER_CM, SUBDIVISIONS
 
 SLEEP_DURATION = 0.5
 
@@ -34,7 +33,7 @@ class LocalNavigation(ThymioEventProcessor):
         self.ctx = ctx
         self.motion_control = motion_control
 
-        self.map = np.array((FINAL_SIZE, FINAL_SIZE), dtype=bool)
+        self.map = np.array((SUBDIVISIONS, SUBDIVISIONS), dtype=bool)
         self.last_time = time()
 
     # == Implemented methods == #
@@ -60,7 +59,6 @@ class LocalNavigation(ThymioEventProcessor):
     # == Other methods == #
 
     def should_freestyle(self):
-        print("freeeeeeeeeeeeeeee style 2€ par mois ?!! wow")
         distances = np.array(self.ctx.state.relative_distances)
         distances = distances[distances != -1]
         if (len(distances) > 0 and self.ctx.state.reactive_control == False):
@@ -70,10 +68,8 @@ class LocalNavigation(ThymioEventProcessor):
                 return
 
         dt = time() - self.last_time
-        print(dt, self.ctx.state.reactive_control)
 
         if dt > 8 and self.ctx.state.reactive_control == True and distances.min() < 5:
-            print("hey heyyyy ")
             self.ctx.state.reactive_control = False
             self.motion_control.setNewWaypoint(1)
 

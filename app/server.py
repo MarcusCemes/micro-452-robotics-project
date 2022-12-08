@@ -123,6 +123,9 @@ async def handle_message(msg: Any, ws: WebSocketResponse, ctx: Context):
         case "optimise":
             ctx.state.optimise = msg["data"]
 
+        case "debug":
+            ctx.debug_update = True
+
         case "stop":
             stop_all(ctx)
 
@@ -132,7 +135,7 @@ async def handle_message(msg: Any, ws: WebSocketResponse, ctx: Context):
 
 
 def stop_all(ctx: Context):
-    for node in [ctx.node, ctx.secondary_node]:
+    for node in [ctx.node, ctx.node_top]:
         node.send_set_variables({
             "motor.left.target": [0],
             "motor.right.target": [0],
@@ -140,6 +143,7 @@ def stop_all(ctx: Context):
 
     critical("Emergency stop!")
     exit()
+
 
 def create_app(ctx: Context):
     app = Application()

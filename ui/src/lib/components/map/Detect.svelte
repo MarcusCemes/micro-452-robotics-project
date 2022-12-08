@@ -17,10 +17,7 @@
     style:--translateY={`${screenPosition.y}px`}
     style:--rotate={`${-orientation}rad`}
 >
-    <path
-        d="M 0 10 L 0 54 L 64 32 Z"
-        fill="currentColor"
-    />
+    <path d="M 0 10 L 0 54 L 64 32 Z" fill="currentColor" />
 </svg>
 
 <style>

@@ -1,8 +1,10 @@
 
-from asyncio import FIRST_COMPLETED, Event, create_task, sleep, wait
+from asyncio import sleep
+from dataclasses import dataclass
 
 import numpy as np
 
+from app.christmas import Second_thymio
 from app.config import *
 from app.context import Context
 from app.filtering import Filtering
@@ -12,10 +14,23 @@ from app.motion_control import MotionControl
 from app.path_finding.types import Map
 from app.server import setFilteringModule
 from app.utils.console import *
+from app.utils.outlier_rejecter import OutlierRejecter
+from app.utils.types import Coords, Vec2
 from app.vision import Vision
-from app.christmas import Second_thymio
 
 POSITION_THRESHOLD = 0.5
+
+
+@dataclass
+class Modules:
+    """A class to hold all the modules"""
+
+    filtering: Filtering
+    global_nav: GlobalNavigation
+    local_nav: LocalNavigation
+    motion_control: MotionControl
+    vision: Vision
+
 
 class BigBrain:
 
@@ -27,124 +42,106 @@ class BigBrain:
     async def start_thinking(self):
         self.init()
 
-        # create_task(self.do_pings())
-        # create_task(self.do_start_stop())
-        # create_task(self.update_scene())
+        modules = self.init_modules()
 
-        with Filtering(self.ctx) as filtering, \
-                MotionControl(self.ctx) as motion_control, \
-                GlobalNavigation(self.ctx) as global_nav, \
-                LocalNavigation(self.ctx, motion_control) as local_nav:
+        with modules.filtering, \
+                modules.motion_control, \
+                modules.global_nav, \
+                modules.local_nav, \
+                modules.vision:
 
-            vision = Vision(self.ctx, external=USE_EXTERNAL_CAMERA, live=USE_LIVE_CAMERA)
-
-            await self.loop(
-                vision,
-                filtering,
-                motion_control,
-                global_nav,
-                local_nav,
-            )
+            await self.loop(modules)
 
     def init(self):
-        # Initialise the obstacle array
+        """Initialise the big brain"""
+
+        self.stop_requested = False
+
+        # Initialise the obstacle NDArray
         subdivs = self.ctx.state.subdivisions
         self.ctx.state.obstacles = np.zeros((subdivs, subdivs), dtype=np.int8)
 
-    async def do_pings(self):
-        while True:
-            await sleep(1)
-            print("🏓 ping")
+    def init_modules(self):
+        """Initialise the modules"""
 
-    async def do_start_stop(self):
-        try:
-            while True:
-                await sleep(2)
-                # await self.ctx.node.set_variables(
-                #    {"motor.left.target": [0], "motor.right.target": [0]})
-                # await sleep(2)
-                await self.ctx.node.set_variables(
-                    {"motor.left.target": [100], "motor.right.target": [100]})
-                await self.ctx.secondary_node.set_variables(
-                    {"motor.left.target": [-100], "motor.right.target": [100]})
+        filtering = Filtering(self.ctx)
+        global_nav = GlobalNavigation(self.ctx)
+        motion_control = MotionControl(self.ctx)
+        local_nav = LocalNavigation(self.ctx, motion_control)
+        vision = Vision(self.ctx)
 
-        except Exception:
-            pass
+        return Modules(filtering, global_nav, local_nav, motion_control, vision)
 
-    async def update_scene(self):
-        while True:
-            self.ctx.scene_update.trigger()
-            await sleep(1)
+    async def loop(self, modules: Modules):
+        setFilteringModule(modules.filtering)
 
-    async def loop(
-        self,
-        vision: Vision,
-        filtering: Filtering,
-        motion_control: MotionControl,
-        global_nav: GlobalNavigation,
-        local_nav: LocalNavigation,
-    ):
-        setFilteringModule(filtering)
+        modules.vision.calibrate()
 
-        vision.calibrate()
+        back_rejecter = OutlierRejecter[Vec2](2, 5)
+        front_rejecter = OutlierRejecter[Vec2](2, 5)
+        orientation_rejecter = OutlierRejecter[float](0.1, 5)
+
+        await self.ctx.node.set_variables({
+            "motor.left.target": [50],
+            "motor.right.target": [-50],
+        })
 
         while True:
-            obstacles, posImg, posPhy, pos2Img, pos2Phy = vision.update()
-            #if orientation and position is too far do not update
-            if self.ctx.state.last_detection != None: 
-                if posPhy[2] < POSITION_THRESHOLD + self.ctx.state.last_orientation and posPhy[2] > self.ctx.state.last_orientation - POSITION_THRESHOLD:
-                    debug("update")
-                    filtering.update(posPhy)
-                    
-            self.ctx.state.last_detection = (posPhy[0], posPhy[1])
-            self.ctx.state.last_detection_2 = (pos2Phy[0], pos2Phy[1])
-            self.ctx.state.last_orientation = posPhy[2]
-            self.ctx.state.changed()
+            obs = modules.vision.next()
 
-            if self.significant_change(obstacles):
-                debug("\\[big brain] Scene changed significantly, updating")
-                # update filtering with camera reading
+            if obs:
+                back = back_rejecter.next(obs.back)
+                front = front_rejecter.next(obs.front)
+                orientation = orientation_rejecter.next(obs.orientation)
 
-                self.ctx.state.obstacles = obstacles.tolist()
-                self.ctx.state.changed()
-                self.ctx.scene_update.trigger()
+                # if orientation and position is too far do not update
+                # if self.ctx.state.last_detection != None:
+                #     if obs.orientation < POSITION_THRESHOLD + self.ctx.state.last_orientation and obs.orientation > self.ctx.state.last_orientation - POSITION_THRESHOLD:
+                #         debug("update")
+                #         modules.filtering.update(obs.back)
+
+                self.ctx.state.last_detection = back
+                self.ctx.state.last_detection_2 = front
+                self.ctx.state.last_orientation = orientation
+
+                if self.significant_change(obs.obstacles):
+                    debug("\\[big brain] Scene changed significantly, updating")
+                    # update filtering with camera reading
+
+                    self.ctx.state.obstacles = obs.obstacles
 
             if self.ctx.state.arrived == True:
                 await self.second_thymio.drop_baulbe()
-                self.ctx.state.arrived == False
+                self.ctx.state.arrived = False
 
-            await sleep(UPDATE_FREQUENCY)
-
-        while True:
-
-            if not local_nav.should_freestyle():
-                await sleep(0.1)
-                continue
-
-            # print("entering freestyle 💃🕺")
-            await local_nav.freestyle()
-            await motion_control.update_motor_control()
-            continue
-
-            frame = vision.next_frame(SUBDIVISIONS)
-
-            # TODO: Update state with obstacles
             self.ctx.scene_update.trigger()
 
-            # filtering.update(frame.position, frame.orientation)
+            # await sleep(UPDATE_FREQUENCY)
+            self.ctx.debug_update = False
+            await sleep(0.1)
 
-            # await self.sleep_until_event(filtering)
+        # while True:
 
-            if local_nav.should_freestyle():
-                await local_nav.freestyle(motion_control)
+        #     if not modules.local_nav.should_freestyle():
+        #         await sleep(0.1)
+        #         continue
 
-    async def sleep_until_event(self, filtering: Filtering):
-        """Return once something important happens, such as a proximity event."""
+        #     # print("entering freestyle 💃🕺")
+        #     await local_nav.freestyle()
+        #     await motion_control.update_motor_control()
+        #     continue
 
-        await wait([
-            sleep(self.sleep_interval),
-            filtering.proximity_event()
-        ], return_when=FIRST_COMPLETED)
+        #     frame = vision.next_frame(SUBDIVISIONS)
+
+        #     # TODO: Update state with obstacles
+        #     self.ctx.scene_update.trigger()
+
+        #     # filtering.update(frame.position, frame.orientation)
+
+        #     # await self.sleep_until_event(filtering)
+
+        #     if local_nav.should_freestyle():
+        #         await local_nav.freestyle(motion_control)
 
     def significant_change(self, obstacles: Map) -> bool:
         if self.ctx.state.obstacles is None:
@@ -154,3 +151,6 @@ class BigBrain:
 
     def matrix_distance(self, a: Map, b: Map) -> int:
         return np.sum(np.sum(np.abs(b - a)))
+
+    def stop(self, *_):
+        self.stop_requested = True
