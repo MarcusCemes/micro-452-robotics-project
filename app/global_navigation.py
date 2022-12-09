@@ -60,6 +60,7 @@ class GlobalNavigation(BackgroundTask):
 
         self.ctx.state.path = path
         self.ctx.state.computation_time = time
+        self.ctx.state.arrived = False
         self.ctx.state.next_waypoint_index = 0
         self.ctx.state.changed()
 

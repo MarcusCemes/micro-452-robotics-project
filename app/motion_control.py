@@ -26,9 +26,6 @@ class MotionControl(BackgroundTask):
             return
         if self.ctx.state.path is None:
             return
-        if self.ctx.state.next_waypoint_index == len(self.ctx.state.path)-1:
-            self.ctx.state.arrived = True
-            return
 
         index = min(self.ctx.state.next_waypoint_index +
                     indexMore, len(self.ctx.state.path)-1)
@@ -69,9 +66,9 @@ class MotionControl(BackgroundTask):
                 if self.ctx.state.path is None:
                     return
                 self.setNewWaypoint(1)
-
-        await self.ctx.node.set_variables(
-            {"motor.left.target": [int(vLC)], "motor.right.target": [int(vRC)]})
+        if(self.ctx.state.arrived == False):
+            await self.ctx.node.set_variables(
+                {"motor.left.target": [int(vLC)], "motor.right.target": [int(vRC)]})
 
     def controlPosition(self):  # include T somewhere
         if self.ctx.state.position is None:
@@ -108,6 +105,9 @@ class MotionControl(BackgroundTask):
 
         if (abs(dDist) < 6):
             if (abs(dDist) < 1):
+                if(self.ctx.state.next_waypoint_index == len(self.ctx.state.path)-1):
+                    print("arrived")
+                    self.ctx.state.arrived = True
                 return [True, 0, 0]
             return [True, vForward-vAngle, vForward+vAngle]
 

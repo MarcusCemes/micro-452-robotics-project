@@ -85,8 +85,8 @@ async def init():
                     await node.watch(variables=True)
 
                     status.stop()
-                    # wantSecondThymio = input("Do you want a second thymio to be connected? (y/n): ")
-                    wantSecondThymio = False
+                    wantSecondThymio = input("Do you want a second thymio to be connected? (y/n): ")
+                    #wantSecondThymio = False
                     status.start()
 
                     if wantSecondThymio == "y":

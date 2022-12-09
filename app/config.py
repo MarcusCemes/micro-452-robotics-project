@@ -18,8 +18,8 @@ DIAMETER = 9.5
 UPDATE_FREQUENCY = 1
 
 # == Vision == #
-USE_EXTERNAL_CAMERA = True
-USE_LIVE_CAMERA = True
+USE_EXTERNAL_CAMERA = False
+USE_LIVE_CAMERA = False
 
 SCENE_THRESHOLD = 10  # number of obstacles changes to trigger a scene update
 PIXELS_PER_CM = 5   # number of pixels in each cm
@@ -31,3 +31,5 @@ SAFE_DISTANCE = 15   # distance from the hole of the robot until the further poi
 # == Second Thymio == #
 DROP_SPEED = 50     # speed of the motors to drop the bauble
 DROP_TIME = 1.5       # drop duration in seconds
+HALF_TURN_SPEED = 50 # speed of the half turn 
+HALF_TURN_TIME = 7  # time for the thymio to do a 180° turn

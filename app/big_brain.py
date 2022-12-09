@@ -4,7 +4,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from app.christmas import Second_thymio
+from app.christmas import Christmas_celebration
 from app.config import *
 from app.context import Context
 from app.filtering import Filtering
@@ -39,7 +39,7 @@ class BigBrain:
     def __init__(self, ctx: Context, sleep_interval=SLEEP_INTERVAL):
         self.ctx = ctx
         self.sleep_interval = sleep_interval
-        self.second_thymio = Second_thymio(ctx)
+        self.christmas_celebration = Christmas_celebration(ctx)
 
     async def start_thinking(self):
         self.init()
@@ -105,7 +105,7 @@ class BigBrain:
                 # modules.filtering.update(
                 # (obs.back[0], obs.back[1], orientation))
                 # orientation = self.ctx.state.orientation if self.ctx.state.orientation != None else obs_orientation
-                if obs.back != (0.0, 0.0) and obs.front != (0.0, 0.0):
+                if obs.back != (0.0, 0.0) and obs.front != (0.0, 0.0) and USE_EXTERNAL_CAMERA == True:
                     debug("Updated filtering!")
                     modules.filtering.update(
                         (obs.back[0], obs.back[1], orientation))
@@ -123,7 +123,11 @@ class BigBrain:
                     self.ctx.scene_update.trigger()
 
             if self.ctx.state.arrived == True:
-                await self.second_thymio.drop_baulbe()
+                await self.christmas_celebration.stop_thymio()
+                debug("arrived")
+                await self.christmas_celebration.do_half_turn()
+                if self.ctx.node_top != None:
+                    await self.christmas_celebration.drop_baulbe()
                 self.ctx.state.arrived = False
 
             # await sleep(UPDATE_FREQUENCY)
