@@ -16,16 +16,15 @@ class PathOptimiser:
             return path
 
         i = 1
-        optimised_path = path
 
         while i != len(path) - 1:
-            if self.free_path(optimised_path[i - 1], optimised_path[i + 1]):
-                optimised_path.pop(i)
-                i = 1
+            if self.free_path(path[i - 1], path[i + 1]):
+                path.pop(i)
+                i = i - 1 if i > 1 else 1
             else:
                 i += 1
 
-        return optimised_path
+        return path
 
     def free_path(self, a: Location, b: Location) -> bool:
         for (x, y) in self.intermediate_nodes(a, b):
@@ -35,7 +34,6 @@ class PathOptimiser:
         return True
 
     def intermediate_nodes(self, a: Location, b: Location) -> Generator[Location, None, None]:
-
         for loc in raytrace(a, b):
             if in_bounds(loc, self.size):
                 yield loc
@@ -55,6 +53,7 @@ def raytrace(a: Location, b: Location) -> Generator[Location, None, None]:
 
     dx = abs(x2 - x1)
     dy = abs(y2 - y1)
+    n = 1 + dx + dy
 
     x = x1
     y = y1
@@ -65,8 +64,6 @@ def raytrace(a: Location, b: Location) -> Generator[Location, None, None]:
     error = dx - dy
     dx *= 2
     dy *= 2
-
-    n = 1 + dx + dy
 
     for _ in range(n, 0, -1):
         yield x, y
