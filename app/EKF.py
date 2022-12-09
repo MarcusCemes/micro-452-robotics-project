@@ -21,8 +21,8 @@ class ExtendedKalmanFilter(object):
     Var U: control vector (forward_speed[cm/s] rotation_speed[rad/s])
     Var G: Jacobian matrix
     Var H: Observation matrix
-    Var Q: Noise covariance matrix
-    Var R: Measure covariance matrix
+    Var Q: Noise covariance matrix (motor noise)
+    Var R: Measure covariance matrix (camera noise)
     Var P: estimation matrix
 
     @functions:
@@ -43,7 +43,7 @@ class ExtendedKalmanFilter(object):
         param pose: x,y position in cm
         param orientation: orientation from x axis in rad
         """
-        self.dt = 0.1  # refresh rate Ts 0.1s
+        self.dt = 0.1  # refresh rate Ts 0.1s only for init values
 
         # State Vector
         # x, y, orientation
@@ -64,24 +64,25 @@ class ExtendedKalmanFilter(object):
                            [0, 1, math.cos(self.E[2])*self.dt*self.U[0]],
                            [0, 0, 1]], dtype="f")
 
-        # Matrice d'observation, on observe que x, y et orientation
         self.H = np.array([[1, 0, 0],
                            [0, 1, 0],
                            [0, 0, 1]], dtype="f")
 
         self.Q = np.array([[1, 0, 0],
                            [0, 1, 0],
-                           [0, 0, 0.1]], dtype="f")  # valeurs uniquement sur la diag, les bruits sont indépendants
+                           [0, 0, 0.1]], dtype="f")  
 
         self.R = np.array([[0.1, 0, 0],
                            [0, 0.1, 0],
-                           [0, 0, 0.01]], dtype="f")  # bruit de la caméra, peut-être donné par le constructeur.  sinon tuner
+                           [0, 0, 0.01]], dtype="f")
 
         self.P = np.eye(self.A.shape[1])
 
     def update_B(self, dt):
         """ 
         Updates B matrix
+
+        param dt: time interval since last prediction
         """
         self.B = np.array([[math.cos(self.E[2])*dt, 0],
                            [math.sin(self.E[2])*dt, 0],
@@ -96,14 +97,12 @@ class ExtendedKalmanFilter(object):
         """
         speed_forward = (speedL+speedR)/2.0
         speed_rotation = (speedR-speedL)/DIAMETER
-        # debug("sf: "+str(speed_forward)+" sr: "+str(speed_rotation))
         self.U = np.array([[speed_forward], [speed_rotation]])
 
     def update_G(self):
         """ 
         Updates G matrix
         """
-
         self.G = np.array([[1, 0, -math.sin(self.E[2])*self.dt*self.U[0]],
                            [0, 1, math.cos(self.E[2])*self.dt*self.U[0]],
                            [0, 0, 1]], dtype="f")
@@ -125,8 +124,6 @@ class ExtendedKalmanFilter(object):
 
         # computes estimation
         self.E = np.dot(self.A, self.E) + np.dot(self.B, self.U)
-
-        # Calcul de la covariance de l'erreur
         self.P = np.dot(np.dot(self.G, self.P), self.G.T)+self.Q
 
         if (abs(self.E[2]) > math.pi):
