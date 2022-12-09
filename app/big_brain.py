@@ -128,6 +128,7 @@ class BigBrain:
                 await self.christmas_celebration.do_half_turn()
                 if self.ctx.node_top != None:
                     await self.christmas_celebration.drop_baulbe()
+                self.ctx.state.end = None
                 self.ctx.state.arrived = False
 
             # await sleep(UPDATE_FREQUENCY)
