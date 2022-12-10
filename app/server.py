@@ -7,25 +7,19 @@ from aiohttp.web import (Application, AppRunner, Request, TCPSite,
                          WebSocketResponse, get)
 
 from app.context import Context
-from app.filtering import Filtering
 from app.state import ChangeListener, normalise_obstacle
 from app.utils.console import *
-
-filteringModule: Filtering | None = None
-
-
-def setFilteringModule(filtering: Filtering):
-    global filteringModule
-    filteringModule = filtering
+from app.utils.types import Channel, Vec2
 
 
 class Server:
-    def __init__(self, ctx: Context) -> None:
+    def __init__(self, ctx: Context, tx_pos: Channel[Vec2]) -> None:
         self.site = None
         self.ctx = ctx
+        self.tx_pos = tx_pos
 
     async def __aenter__(self, host="127.0.0.1", port=8080):
-        app = create_app(self.ctx)
+        app = create_app(self.ctx, self.tx_pos)
         runner = AppRunner(app)
         await runner.setup()
 
@@ -42,6 +36,7 @@ class Server:
 
 async def websocket_handler(request: Request):
     ctx: Context = request.app["ctx"]
+    tx_pos: Channel[Vec2] = request.app["tx_pos"]
 
     ws = WebSocketResponse()
     await ws.prepare(request)
@@ -55,7 +50,7 @@ async def websocket_handler(request: Request):
         await ws.send_json({"type": "state", "data": ctx.state.json()})
 
         tx = create_task(handle_tx(ws, listener))
-        await handle_rx(ws, ctx)
+        await handle_rx(ws, ctx, tx_pos)
 
         tx.cancel()
         debug("\\[server] Client disconnected")
@@ -91,22 +86,20 @@ async def handle_tx(ws: WebSocketResponse, listener: ChangeListener):
         print_exc()
 
 
-async def handle_rx(ws: WebSocketResponse, ctx: Context):
+async def handle_rx(ws: WebSocketResponse, ctx: Context, tx_pos: Channel[Vec2]):
     async for msg in ws:
         if msg.type == WSMsgType.TEXT:
-            create_task(handle_message(msg.json(), ws, ctx))
+            create_task(handle_message(msg.json(), ws, ctx, tx_pos))
 
 
-async def handle_message(msg: Any, ws: WebSocketResponse, ctx: Context):
+async def handle_message(msg: Any, ws: WebSocketResponse, ctx: Context, tx_pos: Channel[Vec2]):
     match msg["type"]:
         case "ping":
             id = msg["data"]
             await ws.send_json({"type": "pong", "data": id})
 
         case "set_position":
-            if filteringModule:
-                for _ in range(0, 10):
-                    filteringModule.update((*msg["data"], 0))
+            tx_pos.send(msg["data"])
 
         case "set_end":
             ctx.state.end = msg["data"]
@@ -146,9 +139,10 @@ def stop_all(ctx: Context):
     exit()
 
 
-def create_app(ctx: Context):
+def create_app(ctx: Context, tx_pos: Channel[Vec2]):
     app = Application()
     app["ctx"] = ctx
+    app["tx_pos"] = tx_pos
 
     app.add_routes([get('/ws', websocket_handler)])
     return app

@@ -6,8 +6,8 @@ from time import time
 
 from app.context import Context
 from app.motion_control import MotionControl
-from app.utils.event_processor import ThymioEventProcessor
-from app.config import PIXELS_PER_CM, SUBDIVISIONS
+from app.config import PIXELS_PER_CM
+from app.utils.module import Module
 
 SLEEP_DURATION = 0.5
 
@@ -27,10 +27,10 @@ SensorsValuesBack = np.array([[1, 4992], [2, 4929], [3, 4762], [4, 4276], [
 thymiospeed_to_cm = 21.73913043478261/50/10
 
 
-class LocalNavigation(ThymioEventProcessor):
+class LocalNavigation(Module):
 
     def __init__(self, ctx: Context, motion_control: MotionControl):
-        self.ctx = ctx
+        super().__init__(ctx)
         self.motion_control = motion_control
 
         self.last_time = time()

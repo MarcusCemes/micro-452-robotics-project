@@ -2,16 +2,16 @@ import numpy as np
 import math
 
 from app.context import Context
-from app.utils.background_task import BackgroundTask
+from app.utils.module import Module
 from app.utils.types import Vec2
 
 MAX_WAIT = 0.1
 
 
-class MotionControl(BackgroundTask):
+class MotionControl(Module):
 
     def __init__(self, ctx: Context):
-        super().__init__()
+        super().__init__(ctx)
 
         self.times = 0
         self.factor = 2
@@ -66,7 +66,7 @@ class MotionControl(BackgroundTask):
                 if self.ctx.state.path is None:
                     return
                 self.setNewWaypoint(1)
-        if(self.ctx.state.arrived == False):
+        if (self.ctx.state.arrived == False):
             await self.ctx.node.set_variables(
                 {"motor.left.target": [int(vLC)], "motor.right.target": [int(vRC)]})
 
@@ -105,7 +105,7 @@ class MotionControl(BackgroundTask):
 
         if (abs(dDist) < 6):
             if (abs(dDist) < 1):
-                if(self.ctx.state.next_waypoint_index == len(self.ctx.state.path)-1):
+                if (self.ctx.state.next_waypoint_index == len(self.ctx.state.path)-1):
                     print("arrived")
                     self.ctx.state.arrived = True
                 return [True, 0, 0]

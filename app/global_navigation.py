@@ -12,16 +12,16 @@ from app.path_finding.dijkstra import Dijkstra
 from app.path_finding.grid_graph import GridGraph
 from app.path_finding.types import Algorithm, Location, Map
 from app.state import ObstacleQuad
-from app.utils.background_task import BackgroundTask
 from app.utils.console import *
 from app.utils.math import clamp
+from app.utils.module import Module
 from app.utils.types import Vec2
 
 
-class GlobalNavigation(BackgroundTask):
+class GlobalNavigation(Module):
 
     def __init__(self, ctx: Context, algorithm: Type[Algorithm] = Dijkstra):
-        super().__init__()
+        super().__init__(ctx)
         self.ctx = ctx
         self.algorithm = algorithm
         self.computedOnce = False
@@ -34,11 +34,10 @@ class GlobalNavigation(BackgroundTask):
     async def _recompute_path(self):
         start = self.ctx.state.position
         end = self.ctx.state.end
+        obstacles = self.ctx.state.obstacles
 
-        if not start or not end:
+        if not start or not end or obstacles is None:
             return False
-
-        # TODO Check if obstacle array is defined/ready?
 
         map = self._generate_map()
         self.ctx.state.boundary_map = map

@@ -2,7 +2,7 @@ from dataclasses import dataclass
 
 from tdmclient import ClientAsyncCacheNode
 
-from app.parallel import Pool
+from app.utils.pool import Pool
 from app.state import State
 from app.utils.types import Signal
 

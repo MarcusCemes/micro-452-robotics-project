@@ -1,7 +1,6 @@
 import math
 
 import numpy as np
-from numpy import typing as npt
 
 
 from app.utils.console import *
@@ -9,7 +8,7 @@ from app.utils.console import *
 from app.config import DIAMETER
 
 
-class ExtendedKalmanFilter(object):
+class ExtendedKalmanFilter:
     """
     class containing every necessary function for EKF
 
@@ -37,7 +36,7 @@ class ExtendedKalmanFilter(object):
     """
 
     def __init__(self, pose, orientation):
-        """ 
+        """
         initiates the class
 
         param pose: x,y position in cm
@@ -70,7 +69,7 @@ class ExtendedKalmanFilter(object):
 
         self.Q = np.array([[1, 0, 0],
                            [0, 1, 0],
-                           [0, 0, 0.1]], dtype="f")  
+                           [0, 0, 0.1]], dtype="f")
 
         self.R = np.array([[0.1, 0, 0],
                            [0, 0.1, 0],
@@ -79,7 +78,7 @@ class ExtendedKalmanFilter(object):
         self.P = np.eye(self.A.shape[1])
 
     def update_B(self, dt):
-        """ 
+        """
         Updates B matrix
 
         param dt: time interval since last prediction
@@ -89,7 +88,7 @@ class ExtendedKalmanFilter(object):
                            [0, dt]], dtype="f")
 
     def update_U(self, speedL, speedR):
-        """ 
+        """
         Updates U matrix
 
         param speedL: left wheel speed sensor in cm/s
@@ -100,7 +99,7 @@ class ExtendedKalmanFilter(object):
         self.U = np.array([[speed_forward], [speed_rotation]])
 
     def update_G(self):
-        """ 
+        """
         Updates G matrix
         """
         self.G = np.array([[1, 0, -math.sin(self.E[2])*self.dt*self.U[0]],
@@ -108,7 +107,7 @@ class ExtendedKalmanFilter(object):
                            [0, 0, 1]], dtype="f")
 
     def predict_ekf(self, speedL, speedR, dt):
-        """ 
+        """
         estimates the next state
 
         param speedL: left wheel speed sensor in cm/s
@@ -132,7 +131,7 @@ class ExtendedKalmanFilter(object):
         return self.E[0].item(), self.E[1].item(), self.E[2].item()
 
     def update_ekf(self, z):
-        """ 
+        """
         updates the estimation matrices when camera data is given
 
         param z: x,y,orientation in [cm][cm][rad]
