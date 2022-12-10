@@ -34,6 +34,7 @@ class LocalNavigation(Module):
         self.motion_control = motion_control
 
         self.last_time = time()
+        self.computedOnce = False
 
     # == Implemented methods == #
 
@@ -52,27 +53,28 @@ class LocalNavigation(Module):
 
     def updateWithoutSensors(self):
         dt = time() - self.last_time
+
+        if dt > 7 and self.ctx.state.reactive_control == True and self.computedOnce == False:
+            self.ctx.scene_update.trigger() #update djisktra
+            self.computedOnce = True
+        
         if dt > 8 and self.ctx.state.reactive_control:
+            self.computedOnce = False
             self.ctx.state.reactive_control = False
             self.motion_control.setNewWaypoint(1)
+
     # == Other methods == #
 
     def should_freestyle(self):
         distances = np.array(self.ctx.state.relative_distances)
+        distances = distances[:-2]
         distances = distances[distances != -1]
         if (len(distances) > 0 and self.ctx.state.reactive_control == False):
-            print("hohoooooo")
             if (distances.min() < 3.5):
-                print("helllooo")
                 self.ctx.state.reactive_control = True
+                self.computedOnce = False
                 self.last_time = time()
                 return
-
-        dt = time() - self.last_time
-
-        if dt > 8 and self.ctx.state.reactive_control == True and distances.min() < 5:
-            self.ctx.state.reactive_control = False
-            self.motion_control.setNewWaypoint(1)
 
     def update(self):
         allDistances = self.getDistanceArray()

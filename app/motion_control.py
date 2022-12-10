@@ -57,6 +57,7 @@ class MotionControl(Module):
         else:
             controlPos = self.controlPosition()
             if controlPos is None:
+                print("out")
                 return
             (arrived, vLC, vRC) = controlPos
             if arrived:
@@ -66,7 +67,7 @@ class MotionControl(Module):
                 if self.ctx.state.path is None:
                     return
                 self.setNewWaypoint(1)
-        if (self.ctx.state.arrived == False):
+
             await self.ctx.node.set_variables(
                 {"motor.left.target": [int(vLC)], "motor.right.target": [int(vRC)]})
 
@@ -105,8 +106,7 @@ class MotionControl(Module):
 
         if (abs(dDist) < 6):
             if (abs(dDist) < 1):
-                if (self.ctx.state.next_waypoint_index == len(self.ctx.state.path)-1):
-                    print("arrived")
+
                     self.ctx.state.arrived = True
                 return [True, 0, 0]
             return [True, vForward-vAngle, vForward+vAngle]
@@ -114,9 +114,9 @@ class MotionControl(Module):
         return [False, vForward-vAngle, vForward+vAngle]
 
     def controlWithDistance(self):
-        print("panik a bord")
+        [a,b,c] = self.controlPosition() #get update on waypoints
         distances = np.array(self.ctx.state.relative_distances)
-        vForward = 20
+        vForward = 30
         vAngle = -3
 
         if (distances[0] == -1):
@@ -132,11 +132,14 @@ class MotionControl(Module):
 
         # the higher the less priority you have
         newD = np.array([distances[1], distances[3], distances[4]])
-        idx = newD.argmin()
-        if (newD[idx] != -1 and newD[idx] < 4):
-            self.times = 0
-            vAngle = -(newD[idx]-4)*10
-            vForward = (newD[idx]-4)*20
+        newD = newD[newD!=-1]
+        if(len(newD) > 0):
+            dMin = newD.min()
+            if (dMin < 5):
+                self.times = 0
+                vAngle = -(dMin-5)*10
+                if(dMin < 4):
+                    vForward = (dMin-4)*10
 
         # 2nd priority, if smt in left sensor
         if (distances[0] != -1):
@@ -144,12 +147,12 @@ class MotionControl(Module):
             if (distances[0] < 5):
                 vAngle = -(distances[0]-5)*8
                 if (distances[0] < 4):
-                    vForward = (distances[0]-4)*20
+                    vForward = (distances[0]-4)*10
         # 1st priority, if sens smt in front stop
         if (distances[2] != -1 and distances[2] < 5):
             self.times = 0
             vAngle = -(distances[2]-5)*10
             if (distances[2] < 4):
-                vForward = (distances[2]-4)*20
+                vForward = (distances[2]-4)*10
 
         return [False, int((vForward + vAngle)*self.factor), int((vForward - vAngle)*self.factor)]
