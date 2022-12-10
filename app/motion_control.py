@@ -66,9 +66,10 @@ class MotionControl(Module):
                     return
                 self.setNewWaypoint(1)
         print(vLC, vRC)
-        
+
         await self.ctx.node.set_variables(
             {"motor.left.target": [int(vLC)], "motor.right.target": [int(vRC)]})
+
         print("out")
 
     def controlPosition(self):  # include T somewhere
@@ -115,7 +116,7 @@ class MotionControl(Module):
     def controlWithDistance(self):
         distances = np.array(self.ctx.state.relative_distances)
         print(distances)
-        bb = self.controlPosition() #get update on waypoints
+        bb = self.controlPosition()  # get update on waypoints
         distances = np.array(self.ctx.state.relative_distances)
         vForward = 30
         vAngle = -3
@@ -131,13 +132,13 @@ class MotionControl(Module):
                 vAngle = -15
         # the higher the less priority you have
         newD = np.array([distances[1], distances[3], distances[4]])
-        newD = newD[newD!=-1]
-        if(len(newD) > 0):
+        newD = newD[newD != -1]
+        if (len(newD) > 0):
             dMin = newD.min()
             if (dMin < 5):
                 self.times = 0
                 vAngle = -(dMin-5)*10
-                if(dMin < 4):
+                if (dMin < 4):
                     vForward = (dMin-4)*10
 
         # 2nd priority, if smt in left sensor
@@ -154,4 +155,3 @@ class MotionControl(Module):
             if (distances[2] < 4):
                 vForward = (distances[2]-4)*10
         return [False, int((vForward + vAngle)*self.factor), int((vForward - vAngle)*self.factor)]
-        

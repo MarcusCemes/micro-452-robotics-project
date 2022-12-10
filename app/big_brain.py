@@ -97,8 +97,10 @@ class BigBrain:
                 # modules.filtering.update(
                 # (obs.back[0], obs.back[1], orientation))
                 # orientation = self.ctx.state.orientation if self.ctx.state.orientation != None else obs_orientation
-                if obs.back != (0.0, 0.0) and obs.front != (0.0, 0.0) and USE_EXTERNAL_CAMERA == True:
-                    debug("Updated filtering!")
+
+                # if obs.back != (0.0, 0.0) and obs.front != (0.0, 0.0) and USE_EXTERNAL_CAMERA == True:
+
+                if USE_LIVE_CAMERA or self.ctx.state.position == None:
                     modules.filtering.update(
                         (obs.back[0], obs.back[1], orientation))
 
@@ -122,7 +124,7 @@ class BigBrain:
                 debug("arrived")
                 await self.christmas_celebration.do_half_turn()
                 if self.ctx.node_top != None:
-                    await self.christmas_celebration.drop_baulbe()      
+                    await self.christmas_celebration.drop_baulbe()
             print("run")
             self.ctx.debug_update = False
             await sleep(UPDATE_FREQUENCY)
