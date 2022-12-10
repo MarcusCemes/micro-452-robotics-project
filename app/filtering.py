@@ -1,26 +1,32 @@
 import math
-from asyncio import Event
 from time import time
 
 import numpy as np
 
+from app.config import PHYSICAL_SIZE_CM, THYMIO_TO_CM
 from app.context import Context
 from app.EKF import ExtendedKalmanFilter
 from app.utils.console import *
-from app.utils.event_processor import ThymioEventProcessor
-from app.config import THYMIO_TO_CM, PHYSICAL_SIZE_CM
+from app.utils.module import Module
+from app.utils.types import Channel, Vec2
 
 
-class Filtering(ThymioEventProcessor):
+class Filtering(Module):
 
-    def __init__(self, ctx: Context):
+    def __init__(self, ctx: Context, rx_pos: Channel[Vec2]):
         super().__init__(ctx)
+        self.rx_pos = rx_pos
 
-        self.on_update = Event()
         self.last_update = None
 
         self.ekf = ExtendedKalmanFilter(
-            (PHYSICAL_SIZE_CM/2, PHYSICAL_SIZE_CM/2),  math.pi/2) #initial position of the thymio, middle, facing up
+            (PHYSICAL_SIZE_CM/2, PHYSICAL_SIZE_CM/2),  math.pi/2)  # initial position of the thymio, middle, facing north
+
+    async def run(self):
+        while True:
+            pos = await self.rx_pos.recv()
+            if pos is not None:
+                self.update((*pos, 0.0))
 
     def process_event(self, variables):
         """
@@ -30,12 +36,12 @@ class Filtering(ThymioEventProcessor):
         """
         [vl] = variables["motor.left.speed"]
         [vr] = variables["motor.right.speed"]
-        
+
         vl = vl * THYMIO_TO_CM
         vr = vr * THYMIO_TO_CM
 
         self.predict(vl, vr)
-        
+
         self.ctx.pose_update.trigger()
         self.ctx.state.changed()
 
@@ -61,7 +67,7 @@ class Filtering(ThymioEventProcessor):
 
         self.last_update = now
 
-    def update(self, pose): 
+    def update(self, pose):
         """ 
         Updates the thymio position by correcting the predictions and updating the state
 

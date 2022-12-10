@@ -1,6 +1,5 @@
 from dataclasses import dataclass
 from enum import Enum
-from math import atan2
 from typing import Callable
 
 import cv2
@@ -75,15 +74,16 @@ class Vision:
         self.ax = None
 
     def __enter__(self):
-        source = 1 if self.external else 0  # 0 = webcam, 1 = external
-        self.camera = cv2.VideoCapture(source, cv2.CAP_DSHOW)
+        if self.live:
+            source = 1 if self.external else 0  # 0 = webcam, 1 = external
+            self.camera = cv2.VideoCapture(source, cv2.CAP_DSHOW)
 
-        if self.live and not self.camera.isOpened():
-            error("Could not open capture source!")
-            exit(1)
+            if not self.camera.isOpened():
+                raise RuntimeError("Could not open capture source!")
 
     def __exit__(self, *_):
-        self.camera.release()
+        if self.live:
+            self.camera.release()
 
     # === Calibration === #
 
@@ -97,7 +97,7 @@ class Vision:
             raise RuntimeError("Could not read image!")
 
         info("A GUI window will open to calibrate the vision system")
-        info("Select 4 points to correct perspective (TL, TR, BR, BL)")
+        info("Select 4 points to correct perspective (TL, BR, BR, TR)")
         info("Then select the back landmark, then the front landmark")
         info("Press N to take a new frame, or Q to exit")
 
@@ -131,7 +131,6 @@ class Vision:
         # Generate the perspective transform
         src = np.array(self.pts_src)
         dst = np.array(self._homoDstPoints())
-        debug(f"Source points: {src}")
         self.perspective_correction, _ = cv2.findHomography(src, dst)
 
         info("Calibration complete!")

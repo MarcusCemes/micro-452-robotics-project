@@ -15,7 +15,7 @@ THYMIO_TO_CM = 3.85/100  # NEEDS TO BE MODIFIED ACCORDING TO THE THYMIO
 DIAMETER = 9.5
 
 # == Big Brain == #
-UPDATE_FREQUENCY = 1
+UPDATE_FREQUENCY = 0.2
 
 # == Vision == #
 USE_EXTERNAL_CAMERA = False
@@ -31,5 +31,5 @@ SAFE_DISTANCE = 15   # distance from the hole of the robot until the further poi
 # == Second Thymio == #
 DROP_SPEED = 50     # speed of the motors to drop the bauble
 DROP_TIME = 1.5       # drop duration in seconds
-HALF_TURN_SPEED = 50 # speed of the half turn 
+HALF_TURN_SPEED = 50  # speed of the half turn
 HALF_TURN_TIME = 7  # time for the thymio to do a 180° turn

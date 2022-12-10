@@ -6,8 +6,8 @@ from time import time
 
 from app.context import Context
 from app.motion_control import MotionControl
-from app.utils.event_processor import ThymioEventProcessor
-from app.config import PIXELS_PER_CM, SUBDIVISIONS
+from app.config import PIXELS_PER_CM
+from app.utils.module import Module
 
 SLEEP_DURATION = 0.5
 
@@ -27,13 +27,14 @@ SensorsValuesBack = np.array([[1, 4992], [2, 4929], [3, 4762], [4, 4276], [
 thymiospeed_to_cm = 21.73913043478261/50/10
 
 
-class LocalNavigation(ThymioEventProcessor):
+class LocalNavigation(Module):
 
     def __init__(self, ctx: Context, motion_control: MotionControl):
-        self.ctx = ctx
+        super().__init__(ctx)
         self.motion_control = motion_control
 
         self.last_time = time()
+        self.computedOnce = False
 
     # == Implemented methods == #
 
@@ -52,27 +53,28 @@ class LocalNavigation(ThymioEventProcessor):
 
     def updateWithoutSensors(self):
         dt = time() - self.last_time
+
+        if dt > 7 and self.ctx.state.reactive_control == True and self.computedOnce == False:
+            self.ctx.scene_update.trigger() #update djisktra
+            self.computedOnce = True
+        
         if dt > 8 and self.ctx.state.reactive_control:
+            self.computedOnce = False
             self.ctx.state.reactive_control = False
             self.motion_control.setNewWaypoint(1)
+
     # == Other methods == #
 
     def should_freestyle(self):
         distances = np.array(self.ctx.state.relative_distances)
+        distances = distances[:-2]
         distances = distances[distances != -1]
         if (len(distances) > 0 and self.ctx.state.reactive_control == False):
-            print("hohoooooo")
             if (distances.min() < 3.5):
-                print("helllooo")
                 self.ctx.state.reactive_control = True
+                self.computedOnce = False
                 self.last_time = time()
                 return
-
-        dt = time() - self.last_time
-
-        if dt > 8 and self.ctx.state.reactive_control == True and distances.min() < 5:
-            self.ctx.state.reactive_control = False
-            self.motion_control.setNewWaypoint(1)
 
     def update(self):
         allDistances = self.getDistanceArray()
