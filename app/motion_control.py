@@ -57,12 +57,11 @@ class MotionControl(Module):
         else:
             controlPos = self.controlPosition()
             if controlPos is None:
-                print("out")
+                print("no pos")
                 return
             (arrived, vLC, vRC) = controlPos
             if arrived:
                 if self.ctx.state.next_waypoint_index is None:
-                    # do a 180degree turn
                     return
                 if self.ctx.state.path is None:
                     return
@@ -106,8 +105,13 @@ class MotionControl(Module):
 
         if (abs(dDist) < 6):
             if (abs(dDist) < 1):
+<<<<<<< HEAD
                     self.ctx.state.arrived = True
                     return [True, 0, 0]
+=======
+                if(self.ctx.state.next_waypoint_index == len(self.ctx.state.path)-1):
+                    self.ctx.state.arrived = True
+>>>>>>> origin/main
             return [True, vForward-vAngle, vForward+vAngle]
 
         return [False, vForward-vAngle, vForward+vAngle]

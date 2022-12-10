@@ -298,8 +298,8 @@ class Vision:
         resized = cv2.resize(obstacles, dsize=(SUBDIVISIONS, SUBDIVISIONS))
 
         # Flip the image vertically to match the robot's coordinate system
-        # return cv2.flip(resized, 1)
-        return cv2.rotate(resized, cv2.ROTATE_90_COUNTERCLOCKWISE)
+        return cv2.flip(resized, 0)
+        #return cv2.rotate(resized, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
     def _normalise(self, image: Image, threshold=THRESHOLD) -> Image:
         """Normalises the image to 0 and 1 values, based on a threshold level."""

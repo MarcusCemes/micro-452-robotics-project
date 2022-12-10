@@ -1,30 +1,136 @@
-import numpy as np 
-import matplotlib
 import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
+import numpy as np
 
-#colormap
-colormap = matplotlib.colors.ListedColormap(['#FFFFFF', 'black', 'red']) #in order: void,ground,walls,fire1,e-pouck ext, e-pouck int, arrow, fire2, fire3
-bounds = [0.5, 1.5, 2.5]
-perso_norm = matplotlib.colors.BoundaryNorm(bounds, colormap.N)
+from app.config import PHYSICAL_SIZE_CM, SUBDIVISIONS
+from app.context import Context
 
-DIMX = 168
-DIMY = 168
+ARROW_L = 3
 
-class Map_obj(object):
-    def __init__(self, ctx):
-        self.ctx = ctx
-        #creation of the map matrix
-        self.map_matrix = np.zeros((DIMX, DIMY))
+def reset(ctx: Context):
+    ctx.state.boundary_map = None
+    ctx.state.obstacles = np.zeros((SUBDIVISIONS, SUBDIVISIONS), dtype=np.int8)
+    ctx.state.path = None
+    ctx.state.position = None
+    ctx.state.orientation = None
+    ctx.state.end = None
+    ctx.state.optimise = False
 
-    def display_map(self):
-        fig = plt.imshow(self.map_matrix, colormap)
 
-    def clear_map(self):
-        self.map_matrix = np.zeros((DIMX, DIMY))
-        self.display_map()
+def plot_map(ctx: Context, Title):
+    map = create_map(ctx)
+    plt.imshow(map, cmap="YlGnBu")
 
-    def update_map(self):
-        (x, y) = self.ctx.state.position
-        self.map_matrix[int(x), int(y)] = 2.0
+    if ctx.state.position is not None:
+        (y, x) = to_image_space(ctx.state.position)
+        plt.plot(y, x, "ro")
+
+    if ctx.state.end is not None:
+        (y, x) = to_image_space(ctx.state.end)
+        plt.plot(y, x, "co")
+
+    if ctx.state.path is not None:
+        path = np.array(ctx.state.path)
+        path = np.apply_along_axis(to_image_space, 1, path)
+        plt.plot(path[:, 0], path[:, 1], "g")
+
+    if ctx.state.orientation is not None:
+        (y, x) = to_image_space(ctx.state.position)
+        angle = ctx.state.orientation
+        (dx, dy) = (np.sin(angle)*ARROW_L, np.cos(angle)*ARROW_L)
+        plt.arrow(y, x, dy, dx, edgecolor="#750000", facecolor="#750000", width=0.3)
+
+    plt.title(Title)
+    plt.axis("off")
+
+    # Flip the y-axis
+    plt.gca().invert_yaxis()
+
+    plt.show()
+
+
+def show_picture(image_adress):
+    img = mpimg.imread(image_adress)
+    plt.imshow(img)
+    plt.axis("off")
+
+
+def create_map(ctx: Context):
+    map = np.zeros((SUBDIVISIONS, SUBDIVISIONS))
+
+    if ctx.state.boundary_map is not None:
+        map[ctx.state.boundary_map != 0] = 128
+
+    if ctx.state.obstacles is not None:
+        obstacles_array = np.flipud(np.fliplr(np.array(ctx.state.obstacles)))
         
-        self.display_map()
+        map[obstacles_array != 0] = 255
+
+    return map
+
+
+def plot_raytrace(matrix, p1, p2):
+    plt.imshow(matrix, cmap="YlGnBu")
+    plt.plot([p1[0], p2[0]], [p1[1], p2[1]])
+    plt.plot(p1[0], p1[1], "ro")
+    plt.plot(p2[0], p2[1], "co")
+    plt.axis("off")
+    plt.title("Ray-tracing algorithm")
+    plt.show()
+
+
+def plot_path_optimisation(path, optimised_path, obstacles):
+    fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(10, 5))
+
+    path = np.array(path)
+    optimised_path = np.array(optimised_path)
+
+    ax1.imshow(obstacles, cmap="YlGnBu")
+    ax2.imshow(obstacles, cmap="YlGnBu")
+
+    ax1.plot(path[:, 0], path[:, 1], "g")
+    ax1.plot(path[0, 0], path[0, 1], "ro")
+    ax1.plot(path[-1, 0], path[-1, 1], "co")
+    ax1.set_title("Original path")
+    ax1.axis("off")
+
+    ax2.plot(optimised_path[:, 0], optimised_path[:, 1], "g")
+    ax2.plot(optimised_path[0, 0], optimised_path[0, 1], "ro")
+    ax2.plot(optimised_path[-1, 0], optimised_path[-1, 1], "co")
+    ax2.set_title("Optimised path")
+    ax2.axis("off")
+
+    plt.show()
+
+
+def plot_image(image, title=None, colourbar=False):
+    plt.imshow(image, cmap="YlGnBu")
+    plt.axis("off")
+
+    if colourbar:
+        plt.colorbar()
+
+    if title is not None:
+        plt.title(title)
+
+    plt.show()
+
+
+def path_to_coords(path):
+    factor = SUBDIVISIONS / PHYSICAL_SIZE_CM
+    return [
+        (int(factor * x), int(factor * y))
+        for (x, y) in path
+    ]
+
+
+def to_image_space(coords):
+    (x, y) = coords
+    factor = SUBDIVISIONS / PHYSICAL_SIZE_CM
+    return (x * factor, y * factor)
+
+
+def to_physical_space(coords):
+    (y, x) = coords
+    factor = PHYSICAL_SIZE_CM / SUBDIVISIONS
+    return (x * factor, y * factor)
