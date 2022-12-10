@@ -20,7 +20,7 @@ class Filtering(ThymioEventProcessor):
         self.last_update = None
 
         self.ekf = ExtendedKalmanFilter(
-            (PHYSICAL_SIZE_CM/2, PHYSICAL_SIZE_CM/2),  math.pi) #initial position of the thymio, middle, facing left
+            (PHYSICAL_SIZE_CM/2, PHYSICAL_SIZE_CM/2),  math.pi/2) #initial position of the thymio, middle, facing up
 
     def process_event(self, variables):
         """
