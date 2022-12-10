@@ -62,7 +62,9 @@ def create_map(ctx: Context):
         map[ctx.state.boundary_map != 0] = 128
 
     if ctx.state.obstacles is not None:
-        map[ctx.state.obstacles != 0] = 255
+        obstacles_array = np.flipud(np.fliplr(np.array(ctx.state.obstacles)))
+        
+        map[obstacles_array != 0] = 255
 
     return map
 
