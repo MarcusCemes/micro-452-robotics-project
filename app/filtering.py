@@ -13,8 +13,9 @@ from app.utils.types import Channel, Vec2
 
 class Filtering(Module):
 
-    def __init__(self, ctx: Context, rx_pos: Channel[Vec2]):
+    def __init__(self, ctx: Context, rx_pos: Channel[Vec2] | None = None):
         super().__init__(ctx)
+
         self.rx_pos = rx_pos
 
         self.last_update = None
@@ -23,10 +24,13 @@ class Filtering(Module):
             (PHYSICAL_SIZE_CM/2, PHYSICAL_SIZE_CM/2),  math.pi/2)  # initial position of the thymio, middle, facing north
 
     async def run(self):
+        if self.rx_pos is None:
+            return
+
         while True:
-            pos = await self.rx_pos.recv()
-            if pos is not None:
-                self.update((*pos, 0.0))
+            match await self.rx_pos.recv():
+                case (x, y):
+                    self.update((x, y, 0.0))
 
     def process_event(self, variables):
         """
