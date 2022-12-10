@@ -50,14 +50,13 @@ class MotionControl(Module):
     async def update_motor_control(self):
         if self.waypoint is None:
             self.setNewWaypoint(1)
-
+        print("cc")
         # TODO: Calculate the required motor speeds to reach the next waypoint
         if (self.ctx.state.reactive_control):
             (arrived, vLC, vRC) = self.controlWithDistance()
         else:
             controlPos = self.controlPosition()
             if controlPos is None:
-                print("no pos")
                 return
             (arrived, vLC, vRC) = controlPos
             if arrived:
@@ -66,9 +65,11 @@ class MotionControl(Module):
                 if self.ctx.state.path is None:
                     return
                 self.setNewWaypoint(1)
-
-            await self.ctx.node.set_variables(
-                {"motor.left.target": [int(vLC)], "motor.right.target": [int(vRC)]})
+        print(vLC, vRC)
+        
+        await self.ctx.node.set_variables(
+            {"motor.left.target": [int(vLC)], "motor.right.target": [int(vRC)]})
+        print("out")
 
     def controlPosition(self):  # include T somewhere
         if self.ctx.state.position is None:
@@ -112,48 +113,45 @@ class MotionControl(Module):
         return [False, vForward-vAngle, vForward+vAngle]
 
     def controlWithDistance(self):
-        try:
-            [a,b,c] = self.controlPosition() #get update on waypoints
-            distances = np.array(self.ctx.state.relative_distances)
-            vForward = 30
-            vAngle = -3
-            if (distances[0] == -1):
-                self.times = self.times+1*self.factor
-                if (self.times < 40):
-                    vAngle = 0
-                elif (self.times < 80):
-                    vAngle = -4
-                elif (self.times < 150):
-                    vAngle = -8
-                else:
-                    vAngle = -15
-
-            # the higher the less priority you have
-            newD = np.array([distances[1], distances[3], distances[4]])
-            newD = newD[newD!=-1]
-            if(len(newD) > 0):
-                dMin = newD.min()
-                if (dMin < 5):
-                    self.times = 0
-                    vAngle = -(dMin-5)*10
-                    if(dMin < 4):
-                        vForward = (dMin-4)*10
-
-            # 2nd priority, if smt in left sensor
-            if (distances[0] != -1):
+        distances = np.array(self.ctx.state.relative_distances)
+        print(distances)
+        bb = self.controlPosition() #get update on waypoints
+        distances = np.array(self.ctx.state.relative_distances)
+        vForward = 30
+        vAngle = -3
+        if (distances[0] == -1):
+            self.times = self.times+1*self.factor
+            if (self.times < 40):
+                vAngle = 0
+            elif (self.times < 80):
+                vAngle = -4
+            elif (self.times < 150):
+                vAngle = -8
+            else:
+                vAngle = -15
+        # the higher the less priority you have
+        newD = np.array([distances[1], distances[3], distances[4]])
+        newD = newD[newD!=-1]
+        if(len(newD) > 0):
+            dMin = newD.min()
+            if (dMin < 5):
                 self.times = 0
-                if (distances[0] < 5):
-                    vAngle = -(distances[0]-5)*8
-                    if (distances[0] < 4):
-                        vForward = (distances[0]-4)*10
-            # 1st priority, if sens smt in front stop
-            if (distances[2] != -1 and distances[2] < 5):
-                self.times = 0
-                vAngle = -(distances[2]-5)*10
-                if (distances[2] < 4):
-                    vForward = (distances[2]-4)*10
+                vAngle = -(dMin-5)*10
+                if(dMin < 4):
+                    vForward = (dMin-4)*10
 
-            return [False, int((vForward + vAngle)*self.factor), int((vForward - vAngle)*self.factor)]
-        except:
-            print("The Thymio hasn't sent any prox sensors impules before")
-            return [False, 0, 0]
+        # 2nd priority, if smt in left sensor
+        if (distances[0] != -1):
+            self.times = 0
+            if (distances[0] < 5):
+                vAngle = -(distances[0]-5)*8
+                if (distances[0] < 4):
+                    vForward = (distances[0]-4)*10
+        # 1st priority, if sens smt in front stop
+        if (distances[2] != -1 and distances[2] < 5):
+            self.times = 0
+            vAngle = -(distances[2]-5)*10
+            if (distances[2] < 4):
+                vForward = (distances[2]-4)*10
+        return [False, int((vForward + vAngle)*self.factor), int((vForward - vAngle)*self.factor)]
+        
