@@ -71,7 +71,6 @@ class LocalNavigation(Module):
         distances = distances[distances != -1]
         if (len(distances) > 0 and self.ctx.state.reactive_control == False):
             if (distances.min() < 3.5):
-                print("cc")
                 self.ctx.state.reactive_control = True
                 self.computedOnce = False
                 self.last_time = time()
