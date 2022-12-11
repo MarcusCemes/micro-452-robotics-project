@@ -23,6 +23,7 @@ ColourRange = tuple[Colour, Colour]
 BILATERAL_SIGMA = 75
 CALIBRATE_NAMED_WINDOW = "Vision calibration"
 COLOUR_DELTA = 32
+LANDMARK_DETECTION_THRESHOLD = 10
 TEST_IMAGE_PATH = "assets/test_frame_01.jpg"
 QR_CODE_PATH = "assets/qr_code.png"
 THRESHOLD = 128
@@ -97,7 +98,7 @@ class Vision:
             raise RuntimeError("Could not read image!")
 
         info("A GUI window will open to calibrate the vision system")
-        info("Select 4 points to correct perspective (TL, BR, BR, TR)")
+        info("Select 4 points to correct perspective (TL, TR, BR, BL)")
         info("Then select the back landmark, then the front landmark")
         info("Press N to take a new frame, or Q to exit")
 
@@ -189,8 +190,8 @@ class Vision:
         if self.ax is not None:
             self.ax[0][0].imshow(cv2.cvtColor(image, cv2.COLOR_BGR2RGB))
             self.ax[1][0].imshow(cv2.cvtColor(map, cv2.COLOR_BGR2RGB))
-            self.ax[1][0].plot(back[1], back[0], "ro")
-            self.ax[1][0].plot(front[1], front[0], "bo")
+            self.ax[1][0].plot(*back, "ro")
+            self.ax[1][0].plot(*front, "bo")
 
         if self.ax is not None:
             plt.show()
@@ -247,7 +248,7 @@ class Vision:
         convolution = self._isolate_landmark(convolution, colour, size, axs)
         (x, y) = self._get_maximum(convolution)
 
-        if convolution[x, y] < 10:
+        if convolution[y, x] < LANDMARK_DETECTION_THRESHOLD:
             return None
 
         offset = int(0.35 * size * PIXELS_PER_CM)
@@ -299,7 +300,6 @@ class Vision:
 
         # Flip the image vertically to match the robot's coordinate system
         return cv2.flip(resized, 0)
-        #return cv2.rotate(resized, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
     def _normalise(self, image: Image, threshold=THRESHOLD) -> Image:
         """Normalises the image to 0 and 1 values, based on a threshold level."""
@@ -350,15 +350,17 @@ class Vision:
 
         return kernel
 
-    def _get_maximum(self, map: Image) -> tuple[int, int]:
+    def _get_maximum(self, map: Image) -> Coords:
         max = np.argmax(map, axis=None)
-        return np.unravel_index(max, map.shape)  # type: ignore
+        (y, x) = np.unravel_index(max, map.shape)  # type: ignore
+        return (x, y)  # type: ignore
 
     def _to_physical_space(self, coords: Coords) -> Vec2:
         x, y = coords
 
         # Flip the y axis
         y = IMAGE_PROCESSING_DIM - y
+        
 
         factor = float(PHYSICAL_SIZE_CM) / float(IMAGE_PROCESSING_DIM)
         #factor= 1/float(PIXELS_PER_CM)

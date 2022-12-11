@@ -30,7 +30,6 @@ class MotionControl(Module):
         index = min(self.ctx.state.next_waypoint_index +
                     indexMore, len(self.ctx.state.path)-1)
 
-        # print(index)
         if (index == -1):
             return
         if self.ctx.state.path[index] is None:
@@ -110,7 +109,7 @@ class MotionControl(Module):
 
         return [False, vForward-vAngle, vForward+vAngle]
 
-    def controlWithDistance(self):
+    def controlWithDistance(self):  
         distances = np.array(self.ctx.state.relative_distances)
         bb = self.controlPosition()  # get update on waypoints
         arrived = False
