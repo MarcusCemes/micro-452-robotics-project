@@ -112,6 +112,9 @@ class MotionControl(Module):
     def controlWithDistance(self):  
         distances = np.array(self.ctx.state.relative_distances)
         bb = self.controlPosition()  # get update on waypoints
+        arrived = False
+        if(bb is not None):
+            arrived = bb[0]
         distances = np.array(self.ctx.state.relative_distances)
         vForward = 30
         vAngle = -3
@@ -149,4 +152,4 @@ class MotionControl(Module):
             vAngle = -(distances[2]-5)*10
             if (distances[2] < 4):
                 vForward = (distances[2]-4)*10
-        return [False, int((vForward + vAngle)*self.factor), int((vForward - vAngle)*self.factor)]
+        return [arrived, int((vForward + vAngle)*self.factor), int((vForward - vAngle)*self.factor)]
