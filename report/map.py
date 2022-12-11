@@ -7,6 +7,7 @@ from app.context import Context
 
 ARROW_L = 3
 
+
 def reset(ctx: Context):
     ctx.state.boundary_map = None
     ctx.state.obstacles = np.zeros((SUBDIVISIONS, SUBDIVISIONS), dtype=np.int8)
@@ -19,6 +20,7 @@ def reset(ctx: Context):
 
 def plot_map(ctx: Context, Title):
     map = create_map(ctx)
+
     plt.imshow(map, cmap="YlGnBu")
 
     if ctx.state.position is not None:
@@ -38,7 +40,8 @@ def plot_map(ctx: Context, Title):
         (y, x) = to_image_space(ctx.state.position)
         angle = ctx.state.orientation
         (dx, dy) = (np.sin(angle)*ARROW_L, np.cos(angle)*ARROW_L)
-        plt.arrow(y, x, dy, dx, edgecolor="#750000", facecolor="#750000", width=0.3)
+        plt.arrow(y, x, dy, dx, edgecolor="#750000",
+                  facecolor="#750000", width=0.3)
 
     plt.title(Title)
     plt.axis("off")
@@ -62,9 +65,7 @@ def create_map(ctx: Context):
         map[ctx.state.boundary_map != 0] = 128
 
     if ctx.state.obstacles is not None:
-        obstacles_array = np.flipud(np.fliplr(np.array(ctx.state.obstacles)))
-        
-        map[obstacles_array != 0] = 255
+        map[ctx.state.obstacles != 0] = 255
 
     return map
 

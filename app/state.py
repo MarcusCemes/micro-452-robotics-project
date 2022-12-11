@@ -32,7 +32,8 @@ class ChangeListener:
         self._changes[key] = value
 
     async def wait_for_patch(self):
-        await self._state.wait_changed()
+        if not self._changes:
+            await self._state.wait_changed()
 
 
 @dataclass
