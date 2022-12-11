@@ -121,7 +121,7 @@ class MotionControl(Module):
         distances = np.array(self.ctx.state.relative_distances)
         vForward = 30
         vAngle = -3
-        if (distances[0] == -1):
+        if (distances[0] == -1): #corners control
             self.times = self.times+1*self.factor
             if (self.times < 40):
                 vAngle = 0
@@ -131,7 +131,7 @@ class MotionControl(Module):
                 vAngle = -8
             else:
                 vAngle = -15
-        # the higher the less priority you have
+        # 3rd priority, if smt on the rest of the sensors 
         newD = np.array([distances[1], distances[3], distances[4]])
         newD = newD[newD != -1]
         if (len(newD) > 0):
