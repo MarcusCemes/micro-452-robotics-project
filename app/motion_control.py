@@ -30,7 +30,6 @@ class MotionControl(Module):
         index = min(self.ctx.state.next_waypoint_index +
                     indexMore, len(self.ctx.state.path)-1)
 
-        # print(index)
         if (index == -1):
             return
         if self.ctx.state.path[index] is None:
@@ -50,7 +49,6 @@ class MotionControl(Module):
     async def update_motor_control(self):
         if self.waypoint is None:
             self.setNewWaypoint(1)
-        print("cc")
         # TODO: Calculate the required motor speeds to reach the next waypoint
         if (self.ctx.state.reactive_control):
             (arrived, vLC, vRC) = self.controlWithDistance()
@@ -65,12 +63,9 @@ class MotionControl(Module):
                 if self.ctx.state.path is None:
                     return
                 self.setNewWaypoint(1)
-        print(vLC, vRC)
 
         await self.ctx.node.set_variables(
             {"motor.left.target": [int(vLC)], "motor.right.target": [int(vRC)]})
-
-        print("out")
 
     def controlPosition(self):  # include T somewhere
         if self.ctx.state.position is None:
@@ -114,9 +109,8 @@ class MotionControl(Module):
 
         return [False, vForward-vAngle, vForward+vAngle]
 
-    def controlWithDistance(self):
+    def controlWithDistance(self):  
         distances = np.array(self.ctx.state.relative_distances)
-        print(distances)
         bb = self.controlPosition()  # get update on waypoints
         distances = np.array(self.ctx.state.relative_distances)
         vForward = 30

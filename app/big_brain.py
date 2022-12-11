@@ -121,11 +121,9 @@ class BigBrain:
                 self.ctx.state.path = None
                 self.ctx.state.arrived = False
                 self.ctx.state.changed()
-                debug("arrived")
                 await self.christmas_celebration.do_half_turn()
                 if self.ctx.node_top != None:
                     await self.christmas_celebration.drop_baulbe()
-            print("run")
             self.ctx.debug_update = False
             await sleep(UPDATE_FREQUENCY)
 

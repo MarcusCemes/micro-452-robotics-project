@@ -14,7 +14,6 @@ class Christmas_celebration:
         # dropping
         await self.ctx.node_top.set_variables({"motor.left.target": [DROP_SPEED], "motor.right.target": [DROP_SPEED]})
         await sleep(DROP_TIME)
-        debug("Dropped")
 
         # pause
         await self.ctx.node_top.set_variables({"motor.left.target": [0], "motor.right.target": [0]})
@@ -31,7 +30,6 @@ class Christmas_celebration:
         await self.ctx.node.set_variables({"motor.left.target": [HALF_TURN_SPEED], "motor.right.target": [-HALF_TURN_SPEED]})
         await sleep(HALF_TURN_TIME)
         await self.ctx.node.set_variables({"motor.left.target": [0], "motor.right.target": [0]})
-        debug("half turn done")
     
     async def stop_thymio(self):
         await self.ctx.node.set_variables({"motor.left.target": [0], "motor.right.target": [0]})
