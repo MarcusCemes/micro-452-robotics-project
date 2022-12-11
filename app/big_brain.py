@@ -45,7 +45,8 @@ class BigBrain:
         modules = self.init_modules(rx_pos)
 
         with modules.vision:
-            modules.vision.calibrate()
+            if not modules.vision.calibrate():
+                return
 
             with modules.filtering, \
                     modules.motion_control, \

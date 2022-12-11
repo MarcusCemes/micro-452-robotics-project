@@ -1,5 +1,8 @@
 from asyncio import create_task, run, sleep
+from pathlib import Path
+from pkg_resources import parse_requirements, require, DistributionNotFound
 from sys import version_info
+
 
 import numpy as np
 from rich.padding import Padding
@@ -21,7 +24,9 @@ VERSION_MINOR = 10
 
 def main():
     print_banner()
-    check_version()
+
+    if not check_version() or not check_requirements():
+        return
 
     if RAISE_DEPRECATION_WARNINGS:
         np.warnings.filterwarnings(  # type: ignore
@@ -64,14 +69,38 @@ def check_version():
             ]
         ))
 
-        exit(1)
+        return False
+
+    return True
+
+
+def check_requirements():
+    requirements = parse_requirements(Path("requirements.txt").open())
+
+    not_met = []
+    for requirement in requirements:
+        try:
+            require(str(requirement))
+        except DistributionNotFound:
+            not_met.append(str(requirement))
+
+    if not_met:
+        console.print("\n".join(
+            [
+                "[bold red]Requirements not met![/]",
+                "The following requirements are not met:\n",
+                *not_met
+            ]
+        ))
+
+    return not_met == []
 
 
 async def init():
     status = console.status(
         "Connecting to Thymio driver", spinner_style="cyan")
 
-    status.start()
+    # status.start()
 
     try:
         with Pool() as pool:
