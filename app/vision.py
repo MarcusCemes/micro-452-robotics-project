@@ -97,7 +97,7 @@ class Vision:
             raise RuntimeError("Could not read image!")
 
         info("A GUI window will open to calibrate the vision system")
-        info("Select 4 points to correct perspective (TL, BR, BR, TR)")
+        info("Select 4 points to correct perspective (TL, TR, BR, BL)")
         info("Then select the back landmark, then the front landmark")
         info("Press N to take a new frame, or Q to exit")
 
@@ -359,6 +359,7 @@ class Vision:
 
         # Flip the y axis
         y = IMAGE_PROCESSING_DIM - y
+        
 
         factor = float(PHYSICAL_SIZE_CM) / float(IMAGE_PROCESSING_DIM)
         #factor= 1/float(PIXELS_PER_CM)

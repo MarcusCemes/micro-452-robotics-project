@@ -130,7 +130,7 @@ class BigBrain:
     def _angle(self, p1: Vec2, p2: Vec2) -> float:
         """Returns the angle of the vector between two points in radians."""
 
-        return math.atan2(p2[1]-p1[1], p2[0]-p1[0])
+        return -math.atan2(p2[1]-p1[1], p2[0]-p1[0])
 
     def significant_change(self, obstacles: Map, threshold=SCENE_THRESHOLD) -> bool:
         """

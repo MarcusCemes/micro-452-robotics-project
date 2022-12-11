@@ -18,8 +18,8 @@ DIAMETER = 9.5
 UPDATE_FREQUENCY = 0.2
 
 # == Vision == #
-USE_EXTERNAL_CAMERA = False
-USE_LIVE_CAMERA = False
+USE_EXTERNAL_CAMERA = True
+USE_LIVE_CAMERA = True
 
 SCENE_THRESHOLD = 10  # number of obstacles changes to trigger a scene update
 PIXELS_PER_CM = 5   # number of pixels in each cm
