@@ -7,21 +7,19 @@ from app.utils.console import *
 
 
 class Module:
+    """Abstract class for modules."""
+
     def __init__(self, ctx: Context):
         self.ctx = ctx
 
     def __enter__(self):
-        self.ctx.node.add_variables_changed_listener(
-            self._on_variables_changed
-        )
+        self.ctx.node.add_variables_changed_listener(self._on_variables_changed)
 
         run = getattr(self, "run", None)
         self._task = create_task(run()) if callable(run) else None
 
     def __exit__(self, *_):
-        self.ctx.node.remove_variables_changed_listener(
-            self._on_variables_changed
-        )
+        self.ctx.node.remove_variables_changed_listener(self._on_variables_changed)
 
         if self._task is not None:
             self._task.cancel()
@@ -51,7 +49,11 @@ class Module:
             print_exc()
 
     async def run(self):
+        """Method that runs in a background task."""
+
         await Event().wait()
 
     def process_event(self, _: dict[str, Any]):
+        """Method that processes events from the Thymio driver."""
+
         pass

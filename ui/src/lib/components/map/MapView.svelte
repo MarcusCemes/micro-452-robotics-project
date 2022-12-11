@@ -16,7 +16,7 @@
         boundary_map: boundaryMap,
         extra_obstacles: extraObstacles,
         last_detection: lastDetection,
-        last_detection_2: lastDetection2,
+        last_detection_front: lastDetectionFront,
         last_orientation: lastOrientation,
         obstacles,
         orientation,
@@ -41,7 +41,7 @@
             : null;
 
     $: detectDot = Vec2.tryParse(lastDetection);
-    $: detect2Dot = Vec2.tryParse(lastDetection2);
+    $: detectFrontDot = Vec2.tryParse(lastDetectionFront);
 </script>
 
 {#if extraObstacles && obstacles && subdivisions}
@@ -72,14 +72,14 @@
     <Thymio {position} {orientation} {scale} />
 {/if}
 
-{#if lastDetection && typeof lastOrientation === "number"}
+{#if detectDot && typeof lastOrientation === "number"}
     <Detect position={detectDot} orientation={lastOrientation} {scale} />
 {/if}
 
-{#if lastDetection}
+{#if detectDot}
     <Dot class="bg-pink-500" position={detectDot} small ping />
 {/if}
 
-{#if lastDetection2}
-    <Dot class="bg-blue-600" position={detect2Dot} small ping />
+{#if detectFrontDot}
+    <Dot class="bg-blue-600" position={detectFrontDot} small ping />
 {/if}

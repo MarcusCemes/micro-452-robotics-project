@@ -52,8 +52,8 @@ def plot_map(ctx: Context, Title):
     plt.show()
 
 
-def show_picture(image_adress):
-    img = mpimg.imread(image_adress)
+def show_picture(image_address):
+    img = mpimg.imread(image_address)
     plt.imshow(img)
     plt.axis("off")
 

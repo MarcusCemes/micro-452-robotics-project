@@ -9,6 +9,11 @@ from app.path_finding.types import Location, Map, WeightedGraph
 
 
 class ContourGraph(WeightedGraph):
+    """
+    This is an alternate graph implementation that uses obstacle contours.
+    It is not utilised in the final product, but can be swapped in for GridGraph as
+    it implements the WeightedGraph interface.
+    """
 
     def __init__(self, map: Map):
         self.map = map
@@ -18,7 +23,9 @@ class ContourGraph(WeightedGraph):
         boundary = self._compile_map(map)
         self.nodes = self._extract_nodes(boundary)
 
-    def neighbors(self, location: Location, end: Location) -> Generator[Location, None, None]:
+    def neighbors(
+        self, location: Location, end: Location
+    ) -> Generator[Location, None, None]:
         if self.path_opt.free_path(location, end):
             yield end
 
@@ -34,21 +41,13 @@ class ContourGraph(WeightedGraph):
 
     def _compile_map(self, map: Map) -> Map:
         boundary = convolve2d(
-            map,
-            self._kernel(),
-            mode="same",
-            boundary="fill",
-            fillvalue=0
+            map, self._kernel(), mode="same", boundary="fill", fillvalue=0
         )
 
         return np.logical_and(map == 0, boundary > 0)
 
     def _extract_nodes(self, boundary: Map) -> list[Location]:
-        return [
-            (x, y)
-            for (y, x), value in np.ndenumerate(boundary)
-            if value == 1
-        ]
+        return [(x, y) for (y, x), value in np.ndenumerate(boundary) if value == 1]
 
     def _kernel(self) -> NDArray:
         return np.ones((3, 3), dtype=np.uint8)

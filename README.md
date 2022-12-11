@@ -2,16 +2,30 @@
 
 _A course project for MICRO-452 as part of MA-RO1 at EPFL, December 2022._
 
+Designed to run on the Thymio robot. Written in Python, navigates the robot
+through a dynamic obstacle scene.
+
+### Features
+
+- 📷 Realtime image processing for object detection using OpenCV
+- 🤖 A Big Brain to make complex decision
+- 🗺️ Optimal pathfinding using Dijkstra's algorithm
+- 🚗 PID based motion control
+- 📱 Realtime WebSocket based control server & Web UI
+- 🧵 Asynchronous event loop
+- 🚨 Cool lights
+- 🔊 Cool sounds
+
 ## Prerequisites
 
 In order to run the project, you wil need:
 
-- A Thymio robot
-- A camera
+- A Thymio robot (or the simulator)
+- A USB camera
 - Python 3.10 or higher
 
 Optionally, to use the real-time visualisation tool, you will also need a
-modern version of Node.js (>=16).
+modern version of Node.js® (>=16).
 
 ### Creating a virtual environment
 
@@ -64,6 +78,14 @@ from the lock file.
 $ npm ci
 ```
 
+<div align="center" style="padding: 0rem 2rem;">
+  <br />
+  <img alt="Screenshot of the web interface" src="./assets/report/ui.png">
+  <br />
+  <em>Figure: Screenshot of the web interface</em>
+</div>
+<br />
+
 ## Usage
 
 The application should be run from the root directory of the project.
@@ -78,6 +100,9 @@ start the main event loop. The control server is run on port `8080`.
 First enter whether you would like to connect to a second Thymio node (Y/n),
 then select the corners of the map and the two landmarks in the GUI window that
 appears (instructions will also be printed in the terminal).
+
+Using the Web UI, you can select a destination point and the robot will navigate
+autonomously to that point, avoiding expected or unexpected obstacles.
 
 To exit the application, press `Ctrl+C` in the terminal or use the stop button
 in the Web UI.
@@ -109,7 +134,7 @@ The notebook report is used to explain the project and present the results.
 It can be run using `jupyter-lab`.
 
 ```powershell
-$ pip install jupyterlab ipywidgets
+$ pip install jupyterlab
 $ jupyter-lab
 ```
 

@@ -9,6 +9,11 @@ from app.utils.types import Signal
 
 @dataclass
 class Context:
+    """
+    Shared application context, providing access to resources used
+    by different modules.
+    """
+
     node: ClientAsyncCacheNode
     node_top: ClientAsyncCacheNode | None
     pool: Pool

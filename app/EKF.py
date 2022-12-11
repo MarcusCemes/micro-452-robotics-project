@@ -1,10 +1,6 @@
 import math
-
 import numpy as np
-
-
 from app.utils.console import *
-
 from app.config import DIAMETER
 
 

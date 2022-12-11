@@ -20,10 +20,7 @@ class ChangeListener:
         self._changes = {}
 
     def get_patch(self) -> dict[str, Any]:
-        patch = {
-            key: make_serialisable(value)
-            for key, value in self._changes.items()
-        }
+        patch = {key: make_serialisable(value) for key, value in self._changes.items()}
 
         self._changes = {}
         return patch
@@ -71,7 +68,7 @@ class State:
     subdivisions: int = SUBDIVISIONS
     physical_size: float = PHYSICAL_SIZE_CM
     last_detection: Vec2 | None = None
-    last_detection_2: Vec2 | None = None
+    last_detection_front: Vec2 | None = None
     last_orientation: float | None = None
 
     # == Local Navigation == #
@@ -125,5 +122,6 @@ def normalise_obstacle(obstacle: ObstacleQuad) -> ObstacleQuad:
     Rearrange obstacle vector components, such that the first vector points
     to the bottom-left of the obstacle (minimum components), vice-versa.
     """
+
     ((ax, ay), (bx, by)) = obstacle
     return ((min(ax, bx), min(ay, by)), (max(ax, bx), max(ay, by)))

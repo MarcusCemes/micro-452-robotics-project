@@ -1,12 +1,10 @@
 import math
 from time import time
-
 import numpy as np
 
 from app.config import PHYSICAL_SIZE_CM, THYMIO_TO_CM
 from app.context import Context
 from app.EKF import ExtendedKalmanFilter
-from app.utils.console import *
 from app.utils.module import Module
 from app.utils.types import Channel, Vec2
 
@@ -20,8 +18,9 @@ class Filtering(Module):
 
         self.last_update = None
 
+        # initial position of the thymio if no vision, middle, facing north
         self.ekf = ExtendedKalmanFilter(
-            (PHYSICAL_SIZE_CM/2, PHYSICAL_SIZE_CM/2),  math.pi/2)  # initial position of the thymio, middle, facing north
+            (PHYSICAL_SIZE_CM/2, PHYSICAL_SIZE_CM/2),  math.pi/2)
 
     async def run(self):
         if self.rx_pos is None:

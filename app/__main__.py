@@ -1,10 +1,9 @@
 from asyncio import create_task, run, sleep
 from pathlib import Path
-from pkg_resources import parse_requirements, require, DistributionNotFound
 from sys import version_info
 
-
 import numpy as np
+from pkg_resources import DistributionNotFound, parse_requirements, require
 from rich.padding import Padding
 from rich.panel import Panel
 from tdmclient import ClientAsync
@@ -30,7 +29,8 @@ def main():
 
     if RAISE_DEPRECATION_WARNINGS:
         np.warnings.filterwarnings(  # type: ignore
-            "error", category=np.VisibleDeprecationWarning)
+            "error", category=np.VisibleDeprecationWarning
+        )
 
     try:
         run(init(), debug=DEBUG)
@@ -55,19 +55,24 @@ def print_banner():
                 + "École Polytechnique Fédérale de Lausanne"
             ),
             (1, 2),
-        ), justify="left")
+        ),
+        justify="left",
+    )
 
 
 def check_version():
     (major, minor, _, _, _) = version_info
+
     if major < VERSION_MAJOR or minor < VERSION_MINOR:
-        console.print("\n".join(
-            [
-                "[bold red]Python version not supported![/]",
-                f"This project uses features from Python {VERSION_MAJOR}.{VERSION_MINOR}",
-                f"You have version {major}.{minor}\n"
-            ]
-        ))
+        console.print(
+            "\n".join(
+                [
+                    "[bold red]Python version not supported![/]",
+                    f"This project uses features from Python {VERSION_MAJOR}.{VERSION_MINOR}",
+                    f"You have version {major}.{minor}\n",
+                ]
+            )
+        )
 
         return False
 
@@ -78,40 +83,46 @@ def check_requirements():
     requirements = parse_requirements(Path("requirements.txt").open())
 
     not_met = []
+
     for requirement in requirements:
         try:
             require(str(requirement))
         except DistributionNotFound:
             not_met.append(str(requirement))
 
-    if not_met:
-        console.print("\n".join(
-            [
-                "[bold red]Requirements not met![/]",
-                "The following requirements are not met:\n",
-                *not_met
-            ]
-        ))
+    if not_met != []:
+        console.print(
+            "\n".join(
+                [
+                    "[bold red]Requirements not met![/]",
+                    "The following requirements are not met:\n",
+                    *not_met,
+                ]
+            )
+        )
 
-    return not_met == []
+        return False
+
+    return True
 
 
 async def init():
-    status = console.status(
-        "Connecting to Thymio driver", spinner_style="cyan")
+    status = console.status("Connecting to Thymio driver", spinner_style="cyan")
 
-    # status.start()
+    status.start()
 
     try:
         with Pool() as pool:
             with ClientAsync() as client:
                 status.update("Waiting for Thymio node")
 
+                # Start processing Thymio driver messages
                 create_task(process_messages(client))
 
                 with await client.lock() as node:
                     status.stop()
 
+                    # Construct the application context
                     ctx = Context(node, None, pool, State())
 
                     info("Primary node connected")
@@ -124,7 +135,11 @@ async def init():
                     connectSecond = input("> ")
 
                     if connectSecond.lower() != "n":
-                        status.update("Waiting for second Thymio node")
+                        if len(client.nodes) < 2:
+                            error("No second Thymio node found")
+                            return
+
+                        status.update("Locking second Thymio node")
                         status.start()
 
                         with await client.nodes[1].lock() as secondary_node:
@@ -148,11 +163,13 @@ async def init():
         warning("Thymio driver connection closed")
 
     finally:
-        if status:
+        if status is not None:
             status.stop()
 
 
 async def start(ctx: Context):
+    """Start the application, launching the server and instantiating the BigBrain."""
+
     channel_position = Channel[Vec2]()
 
     async with Server(ctx, channel_position):
@@ -170,6 +187,7 @@ async def process_messages(client: ClientAsync):
 
     except Exception:
         pass
+
 
 if __name__ == "__main__":
     main()

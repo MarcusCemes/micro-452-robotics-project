@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { Vec2 } from "$lib/utils";
+    import type { Vec2 } from "$lib/utils";
     import type { Scale } from "$lib/stores";
 
     export let position: Vec2;

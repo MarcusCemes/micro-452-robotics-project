@@ -1,11 +1,10 @@
-
 import math
 from asyncio import sleep
 from dataclasses import dataclass
 
 import numpy as np
 
-from app.christmas import Christmas_celebration
+from app.christmas import ChristmasCelebration
 from app.config import *
 from app.context import Context
 from app.filtering import Filtering
@@ -33,11 +32,9 @@ class Modules:
 
 
 class BigBrain:
-
-    def __init__(self, ctx: Context, sleep_interval=SLEEP_INTERVAL):
+    def __init__(self, ctx: Context):
         self.ctx = ctx
-        self.sleep_interval = sleep_interval
-        self.christmas_celebration = Christmas_celebration(ctx)
+        self.christmas_celebration = ChristmasCelebration(ctx)
 
     async def start_thinking(self, rx_pos: Channel[Vec2]):
         self.init()
@@ -48,10 +45,7 @@ class BigBrain:
             if not modules.vision.calibrate():
                 return
 
-            with modules.filtering, \
-                    modules.motion_control, \
-                    modules.global_nav, \
-                    modules.local_nav:
+            with modules.filtering, modules.motion_control, modules.global_nav, modules.local_nav:
 
                 await self.loop(modules)
 
@@ -82,40 +76,39 @@ class BigBrain:
         orientation_rejecter = OutlierRejecter[float](0.1, 5)
 
         while True:
+
+            # get frame reading from vision module
             obs = modules.vision.next()
 
             if obs:
-                obs_orientation = self._angle(obs.back, obs.front)
 
-                back, back_updated = back_rejecter.next(obs.back)
-                front, front_updated = front_rejecter.next(obs.front)
-                orientation, orientation_updated = orientation_rejecter.next(
-                    obs_orientation)
+                # filter back and front reading in case of outlier values
+                back = back_rejecter.next(obs.back)[0]
+                front = front_rejecter.next(obs.front)[0]
 
-                # print("orientation from state: " + str(self.ctx.state.orientation))
-                # print("orientation from camera: " + str(orientation))
+                # from back and front position get orientation and filter it
+                orientation = orientation_rejecter.next(
+                    self._angle(obs.back, obs.front)
+                )[0]
 
-                # modules.filtering.update(
-                # (obs.back[0], obs.back[1], orientation))
-                # orientation = self.ctx.state.orientation if self.ctx.state.orientation != None else obs_orientation
-
-                # if obs.back != (0.0, 0.0) and obs.front != (0.0, 0.0) and USE_EXTERNAL_CAMERA == True:
-
+                # only update if position is known or live camera is used
+                # otherwise only predict state
                 if USE_LIVE_CAMERA or self.ctx.state.position == None:
-                    modules.filtering.update(
-                        (obs.back[0], obs.back[1], orientation))
+                    modules.filtering.update((obs.back[0], obs.back[1], orientation))
 
+                # save last detected position in state for ui display
                 self.ctx.state.last_detection = back
-                self.ctx.state.last_detection_2 = front
+                self.ctx.state.last_detection_front = front
                 self.ctx.state.last_orientation = orientation
                 self.ctx.state.changed()
 
+                # update obstacle map with camera reading
+                # only if consequential change
                 if self.significant_change(obs.obstacles):
-                    # update filtering with camera reading
-
                     self.ctx.state.obstacles = obs.obstacles
                     self.ctx.scene_update.trigger()
 
+            # trigger celebration if end of path is reached
             if self.ctx.state.arrived == True:
                 await self.christmas_celebration.stop_thymio()
                 self.ctx.state.end = None
@@ -124,14 +117,15 @@ class BigBrain:
                 self.ctx.state.changed()
                 await self.christmas_celebration.do_half_turn()
                 if self.ctx.node_top != None:
-                    await self.christmas_celebration.drop_baulbe()
+                    await self.christmas_celebration.drop_bauble()
+
             self.ctx.debug_update = False
             await sleep(UPDATE_FREQUENCY)
 
     def _angle(self, p1: Vec2, p2: Vec2) -> float:
         """Returns the angle of the vector between two points in radians."""
 
-        return math.atan2(p2[1]-p1[1], p2[0]-p1[0])
+        return math.atan2(p2[1] - p1[1], p2[0] - p1[0])
 
     def significant_change(self, obstacles: Map, threshold=SCENE_THRESHOLD) -> bool:
         """
@@ -147,4 +141,5 @@ class BigBrain:
 
     def matrix_distance(self, a: Map, b: Map) -> int:
         """Returns the L1 distance between two matrices of the same size"""
+
         return np.sum(np.sum(np.abs(b - a)))

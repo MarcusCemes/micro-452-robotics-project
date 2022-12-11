@@ -1,12 +1,13 @@
-from heapq import heappush, heappop
+from heapq import heappop, heappush
 from typing import Generic, TypeVar
 
-from app.path_finding.types import Location, Map
+from app.path_finding.types import Location
 
 T = TypeVar("T")
 
 
 class PriorityQueue(Generic[T]):
+    """A basic priority queue implementation using Python's heapq."""
 
     def __init__(self):
         self.elements: list[tuple[float, T]] = []
@@ -22,5 +23,10 @@ class PriorityQueue(Generic[T]):
 
 
 def in_bounds(location: Location, size: tuple[int, int]) -> bool:
+    """
+    Returns true if a location is within the bounds of a map,
+    preventing out-of-bounds errors
+    """
+
     (x, y), (w, h) = location, size
     return 0 <= x < w and 0 <= y < h

@@ -1,5 +1,8 @@
 import math
 
+from rich.console import Console
+from rich.table import Table
+
 from app.utils.types import Vec2
 
 
@@ -14,9 +17,16 @@ def start_movement_simulation(filtering):
 
 
 def print_pose(ctx):
-    print(f"position of the thymio: {ctx.state.position}")
-    print(f"orientation: {ctx.state.orientation}")
-    return
+    table = Table(title="Thymio pose")
+
+    table.add_column("Position")
+    table.add_column("Orientation")
+
+    table.add_row(f"{ctx.state.position}",
+                  "{:.2f}".format(ctx.state.orientation))
+
+    console = Console()
+    console.print(table)
 
 
 def angle(p1: Vec2, p2: Vec2) -> float:
