@@ -18,7 +18,7 @@ UPDATE_FREQUENCY = 0.2  # frequency of big brain internal loop refresh
 
 # == Vision == #
 USE_EXTERNAL_CAMERA = True  # use external camera or webcam
-USE_LIVE_CAMERA = False  # use camera or only fix image
+USE_LIVE_CAMERA = True  # use camera or only fix image
 
 SCENE_THRESHOLD = 10  # number of obstacles changes to trigger a scene update
 PIXELS_PER_CM = 5  # number of pixels in each cm

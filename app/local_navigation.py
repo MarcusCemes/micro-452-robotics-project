@@ -142,6 +142,20 @@ class LocalNavigation(Module):
         allDistances = self.getDistanceArray()
         self.ctx.state.relative_distances = allDistances.tolist()
 
+    def updateMap(
+        self,
+    ):  # Updates the map with all new sensed obstacles
+        relativeWalls = self.getWallRelative()
+        for i in range(len(relativeWalls)):
+            if relativeWalls[i] != None:
+                globalPos = self.wayPointPerceivedToReal(relativeWalls[i])
+                indexes = globalPos / PIXELS_PER_CM
+                try:
+                    if self.ctx.state.obstacles is not None:
+                        self.ctx.state.obstacles[int(indexes[0])][int(indexes[1])] = 1
+                except:
+                    print("detected wall outside of scope")
+
     def rotate(self, angle, coords):
         R = np.array([[np.cos(angle), -np.sin(angle)], [np.sin(angle), np.cos(angle)]])
 
@@ -206,3 +220,22 @@ class LocalNavigation(Module):
             self.getDistance(proxSensor[6], SensorsValuesBack)
         ]
         return np.array(proxDistance)
+
+    def getWallRelative(
+        self,
+    ):  # Returns the relative wall position
+        distAray = np.array(self.ctx.state.relative_distances)
+        obstacle_positions = []
+        for i in range(len(distAray)):
+            obstacle_positionsi = None
+            if distAray[i] != -1:
+                obstacle_positionsi = [[], []]
+                ti = math.atan2(
+                    sensor_pos_from_center[i][1], sensor_pos_from_center[i][0]
+                )
+                obstacle_positionsi = [
+                    sensor_pos_from_center[i][0] + distAray[i] * math.cos(ti),
+                    sensor_pos_from_center[i][1] + distAray[i] * math.sin(ti),
+                ]
+            obstacle_positions = obstacle_positions + [obstacle_positionsi]
+        return obstacle_positions
