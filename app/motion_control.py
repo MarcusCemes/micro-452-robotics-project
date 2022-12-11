@@ -30,9 +30,9 @@ class MotionControl(Module):
         index = min(self.ctx.state.next_waypoint_index +
                     indexMore, len(self.ctx.state.path)-1)
 
-        if (index == -1):#no more path
+        if (index == -1): #no more path
             return
-        if self.ctx.state.path[index] is None:#not defined waypoint problem
+        if self.ctx.state.path[index] is None: #not defined waypoint problem
             return
 
         self.waypoint = self.ctx.state.path[index]
@@ -49,8 +49,8 @@ class MotionControl(Module):
     async def update_motor_control(self): #control function 
         if self.waypoint is None:
             self.setNewWaypoint(1)
-        # TODO: Calculate the required motor speeds to reach the next waypoint
-        if (self.ctx.state.reactive_control): #choose of control (waypoint or reactive)
+        # TODO: Compute the required motor speed to reach the next waypoint
+        if (self.ctx.state.reactive_control): #choice of control (waypoint or reactive)
             (arrived, vLC, vRC) = self.controlWithDistance() #reactive control
         else:
             controlPos = self.controlPosition() #control by waypoint
@@ -58,14 +58,14 @@ class MotionControl(Module):
                 return
             (arrived, vLC, vRC) = controlPos
 
-            if arrived:         #if arrived to previous waypoint update to next one
+            if arrived:         #if arrived to the aimed waypoint update to the next one
                 if self.ctx.state.next_waypoint_index is None:
                     return
                 if self.ctx.state.path is None:
                     return
                 self.setNewWaypoint(1)
 
-        await self.ctx.node.set_variables( #apply the control to the wheels 
+        await self.ctx.node.set_variables( #apply the control on the wheels 
             {"motor.left.target": [int(vLC)], "motor.right.target": [int(vRC)]})
 
     def controlPosition(self):  # PD control whith Fuzzy control for the angle
@@ -103,8 +103,8 @@ class MotionControl(Module):
         temp = min(temp, 50)
         vAngle = temp*np.sign(vAngle)
 
-        if (abs(dDist) < 6): #if < 6 cm of the waypoint => go next waypoint 
-            if (abs(dDist) < 1): #if < 1 cm
+        if (abs(dDist) < 6): #if < 6 cm of the waypoint => go to the next waypoint 
+            if (abs(dDist) < 1): #if < 1 cm => stop
                 if(self.ctx.state.next_waypoint_index == len(self.ctx.state.path)-1):
                     self.ctx.state.arrived = True
                     return [True, 0, 0]
@@ -114,7 +114,7 @@ class MotionControl(Module):
 
     def controlWithDistance(self):  
         distances = np.array(self.ctx.state.relative_distances)
-        bb = self.controlPosition()  # get update on waypoints
+        bb = self.controlPosition()  #if arrives close to the waypoint => update the state next_waypoint 
         arrived = False
         if(bb is not None):
             arrived = bb[0]
@@ -142,14 +142,14 @@ class MotionControl(Module):
                 if (dMin < 4):
                     vForward = (dMin-4)*10
 
-        # 2nd priority, if smt in left sensor
+        # 2nd priority, if smt on the left sensor
         if (distances[0] != -1):
             self.times = 0
             if (distances[0] < 5):
                 vAngle = -(distances[0]-5)*8
                 if (distances[0] < 4):
                     vForward = (distances[0]-4)*10
-        # 1st priority, if sens smt in front stop
+        # 1st priority, if senses smt in the front sensor 
         if (distances[2] != -1 and distances[2] < 5):
             self.times = 0
             vAngle = -(distances[2]-5)*10

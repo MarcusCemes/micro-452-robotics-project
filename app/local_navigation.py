@@ -11,13 +11,13 @@ from app.utils.module import Module
 
 SLEEP_DURATION = 0.5
 
-#Thymio caracteristcs
+#Thymio caracteristics
 center_offset = np.array([5.5, 5.5])
 
 sensor_pos_from_center = np.array([[0.9, 9.4], [3.1, 10.5], [5.5, 11.0], [
                                   8.0, 10.4], [10.2, 9.3], [8.5, 0], [2.5, 0]])-center_offset
 
-#depending of the sensor differents values for the same distance 
+#Each sensor have their own scale eg : [1[cm] <=> 4771 [sensor value]] 
 SensorsValuesFront = np.array([[1, 4771], [2, 4684], [3, 4542], [4, 4150], [
                               5, 3720], [6, 3383], [7, 3100], [8, 2827], [9, 2600], [10, 2400], [11, 2116]])
 SensorsValuesDiag = np.array([[1, 4759], [2, 4702], [3, 4600], [4, 4314], [
@@ -41,12 +41,12 @@ class LocalNavigation(Module):
         self.ctx.state.prox_sensors = variables["prox.horizontal"]
         self.ctx.state.changed() #trigger the signal to wake up other coroutines if needed 
 
-        self.update() #this function updates the state variables relative distance
-        self.should_freestyle() #this function chooses the type of control.
+        self.update() #this function updates the state variable : relative_distance
+        self.should_freestyle() #this function chooses the type of control
 
     async def run(self): 
-        #Sometimes the thymio doesn't send any new sensors values and therefore process_event is never called 
-        #we implemented that function to still update the state if needed even if there is no new sensors values
+        #Sometimes the thymio doesn't send any new sensor value and therefore process_event is never called 
+        #we implemented that function to still update the state if needed even if there is no new sensor value
         #it is useful for the exit condition of the reactive_control 
         while True:
             # DO CHECK
@@ -60,29 +60,27 @@ class LocalNavigation(Module):
             self.ctx.scene_update.trigger() #update djisktra
             self.computedOnce = True
         
-        if dt > 8 and self.ctx.state.reactive_control: #exit condition, if 8 sec passed sinced the trigger 
+        if dt > 8 and self.ctx.state.reactive_control: # 8 sec passed since the trigger => exit condition of reactive control
             self.computedOnce = False
             self.ctx.state.reactive_control = False
             self.motion_control.setNewWaypoint(1)
 
-    # == Other methods == #
-
     def should_freestyle(self):
         distances = np.array(self.ctx.state.relative_distances)
-        distances = distances[:-2] #remove 2 back sensors 
+        distances = distances[:-2] #remove the 2 back sensors 
         distances = distances[distances != -1]
         if (len(distances) > 0 and self.ctx.state.reactive_control == False):
-            if (distances.min() < 3.5): #entry condition, if the obstacle is very close
+            if (distances.min() < 3.5): #if the obstacle is very close => entry condition
                 self.ctx.state.reactive_control = True
                 self.computedOnce = False
                 self.last_time = time()
                 return
 
-    def update(self): #updating state variable 
+    def update(self): #update state variable 
         allDistances = self.getDistanceArray()
         self.ctx.state.relative_distances = allDistances.tolist()
 
-    def updateMap(self): #no use in this project but for futur use, it update the map of all new sensed obstacles
+    def updateMap(self): #no use in this project but for futur use, it updates the map with all new sensed obstacles
         relativeWalls = self.getWallRelative()
         for i in range(len(relativeWalls)):
             if (relativeWalls[i] != None):
@@ -120,7 +118,7 @@ class LocalNavigation(Module):
             return SensorsValuesConversion[idx1, 0]
         if (distance == 0):
             computedDist = SensorsValuesConversion[idx1, 0]
-        else: #if between the values choose linearly the value
+        else: #if between the ref values => linearly compute the value between both of them
             absoluteDiff = np.abs(
                 SensorsValuesConversion[idx2, 1]-SensorsValuesConversion[idx1, 1])
             percentage = (distance/absoluteDiff)
