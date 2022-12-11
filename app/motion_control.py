@@ -107,8 +107,9 @@ class MotionControl(Module):
 
         if (abs(dDist) < 6):
             if (abs(dDist) < 1):
-                self.ctx.state.arrived = True
-                return [True, 0, 0]
+                if(self.ctx.state.next_waypoint_index == len(self.ctx.state.path)-1):
+                    self.ctx.state.arrived = True
+                    return [True, 0, 0]
             return [True, vForward-vAngle, vForward+vAngle]
 
         return [False, vForward-vAngle, vForward+vAngle]
