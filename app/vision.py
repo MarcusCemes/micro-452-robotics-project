@@ -113,7 +113,8 @@ class Vision:
         while self.calibration_step != Step.Done:
             match cv2.waitKey(WAIT_KEY_INTERVAL_MS):
                 case KeyCodes.Q.value:
-                    exit()
+                    cv2.destroyWindow(CALIBRATE_NAMED_WINDOW)
+                    return False
 
                 case KeyCodes.N.value:
                     self.pts_src = []
@@ -123,7 +124,8 @@ class Vision:
 
             if cv2.getWindowProperty(CALIBRATE_NAMED_WINDOW, cv2.WND_PROP_VISIBLE) < 1:
                 info("Calibration window closed, exiting...")
-                exit()
+                cv2.destroyWindow(CALIBRATE_NAMED_WINDOW)
+                return False
 
         # Close the GUI window
         cv2.destroyWindow(CALIBRATE_NAMED_WINDOW)
@@ -135,6 +137,7 @@ class Vision:
         self.perspective_correction, _ = cv2.findHomography(src, dst)
 
         info("Calibration complete!")
+        return True
 
     def _handle_click(self, event, x, y, image):
         match event:
