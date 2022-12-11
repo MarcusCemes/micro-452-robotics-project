@@ -21,53 +21,54 @@ class MotionControl(Module):
         self.waypoint = None
         self.ctx.state.reactive_control = False
 
-    def setNewWaypoint(self, indexMore):
+    def setNewWaypoint(self, indexMore): #update the waypoint to go
         if self.ctx.state.next_waypoint_index is None:
             return
         if self.ctx.state.path is None:
             return
-
+        
         index = min(self.ctx.state.next_waypoint_index +
                     indexMore, len(self.ctx.state.path)-1)
 
-        if (index == -1):
+        if (index == -1):#no more path
             return
-        if self.ctx.state.path[index] is None:
+        if self.ctx.state.path[index] is None:#not defined waypoint problem
             return
 
         self.waypoint = self.ctx.state.path[index]
         self.ctx.state.next_waypoint_index = index
 
-    async def run(self):
+    async def run(self):#update function
         while True:
             await self.ctx.pose_update.wait(timeout=MAX_WAIT)
-            await self.update_motor_control()
+            await self.update_motor_control() #update the control function
 
     def update_waypoint(self, waypoint: Vec2 | None):
         self.waypoint = waypoint
 
-    async def update_motor_control(self):
+    async def update_motor_control(self): #control function 
         if self.waypoint is None:
             self.setNewWaypoint(1)
         # TODO: Calculate the required motor speeds to reach the next waypoint
-        if (self.ctx.state.reactive_control):
-            (arrived, vLC, vRC) = self.controlWithDistance()
+        if (self.ctx.state.reactive_control): #choose of control (waypoint or reactive)
+            (arrived, vLC, vRC) = self.controlWithDistance() #reactive control
         else:
-            controlPos = self.controlPosition()
+            controlPos = self.controlPosition() #control by waypoint
             if controlPos is None:
                 return
             (arrived, vLC, vRC) = controlPos
-            if arrived:
+
+            if arrived:         #if arrived to previous waypoint update to next one
                 if self.ctx.state.next_waypoint_index is None:
                     return
                 if self.ctx.state.path is None:
                     return
                 self.setNewWaypoint(1)
 
-        await self.ctx.node.set_variables(
+        await self.ctx.node.set_variables( #apply the control to the wheels 
             {"motor.left.target": [int(vLC)], "motor.right.target": [int(vRC)]})
 
-    def controlPosition(self):  # include T somewhere
+    def controlPosition(self):  # PD control whith Fuzzy control for the angle
         if self.ctx.state.position is None:
             return None
         if self.waypoint is None:
@@ -79,7 +80,7 @@ class MotionControl(Module):
 
         waypoint = np.array([self.waypoint[0], self.waypoint[1]])
 
-        error = waypoint-currentPos
+        error = waypoint-currentPos #
 
         dAngle = math.atan2(error[1], error[0])-self.ctx.state.orientation
         dDist = min(math.sqrt(error[1]*error[1]+error[0]*error[0]), 8)
@@ -89,8 +90,10 @@ class MotionControl(Module):
             dAngle = - 2*np.sign(dAngle)*math.pi + dAngle
 
         vForward = 0
-
-        if (abs(dAngle) < 45*math.pi/180):
+        #Fuzzy control HERE if angle > 45 degrees => just rotate do not go forward
+        #                   if angle [10:45]  degrees => just rotate and move forward slowly
+        #                   if angle < 10 degrees => rotate and move forward
+        if (abs(dAngle) < 45*math.pi/180): 
             if (abs(dAngle) < 10*math.pi/180):
                 vForward = max(dDist, 4)*5
             else:
@@ -100,8 +103,8 @@ class MotionControl(Module):
         temp = min(temp, 50)
         vAngle = temp*np.sign(vAngle)
 
-        if (abs(dDist) < 6):
-            if (abs(dDist) < 1):
+        if (abs(dDist) < 6): #if < 6 cm of the waypoint => go next waypoint 
+            if (abs(dDist) < 1): #if < 1 cm
                 if(self.ctx.state.next_waypoint_index == len(self.ctx.state.path)-1):
                     self.ctx.state.arrived = True
                     return [True, 0, 0]

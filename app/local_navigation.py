@@ -11,20 +11,19 @@ from app.utils.module import Module
 
 SLEEP_DURATION = 0.5
 
+#Thymio caracteristcs
 center_offset = np.array([5.5, 5.5])
-thymio_coords = np.array([[0, 0], [11, 0], [11, 8.5], [10.2, 9.3],
-                          [8, 10.4], [5.5, 11], [3.1, 10.5],
-                          [0.9, 9.4], [0, 8.5], [0, 0]])-center_offset
 
 sensor_pos_from_center = np.array([[0.9, 9.4], [3.1, 10.5], [5.5, 11.0], [
                                   8.0, 10.4], [10.2, 9.3], [8.5, 0], [2.5, 0]])-center_offset
+
+#depending of the sensor differents values for the same distance 
 SensorsValuesFront = np.array([[1, 4771], [2, 4684], [3, 4542], [4, 4150], [
                               5, 3720], [6, 3383], [7, 3100], [8, 2827], [9, 2600], [10, 2400], [11, 2116]])
 SensorsValuesDiag = np.array([[1, 4759], [2, 4702], [3, 4600], [4, 4314], [
                              5, 3909], [6, 3547], [7, 3254], [8, 3008], [9, 2745], [10, 2500], [11, 2250]])
 SensorsValuesBack = np.array([[1, 4992], [2, 4929], [3, 4762], [4, 4276], [
                              5, 3744], [6, 3319], [7, 2977], [8, 2716], [9, 2489], [10, 2279], [11, 2072]])
-thymiospeed_to_cm = 21.73913043478261/50/10
 
 
 class LocalNavigation(Module):
@@ -38,14 +37,17 @@ class LocalNavigation(Module):
 
     # == Implemented methods == #
 
-    def process_event(self, variables: dict[str, Any]):
+    def process_event(self, variables: dict[str, Any]): #Fuction called everytime the Thymio reads new sensors values
         self.ctx.state.prox_sensors = variables["prox.horizontal"]
-        self.ctx.state.changed()
+        self.ctx.state.changed() #trigger the signal to wake up other coroutines if needed 
 
-        self.update()
-        self.should_freestyle()
+        self.update() #this function updates the state variables relative distance
+        self.should_freestyle() #this function chooses the type of control.
 
-    async def run(self):
+    async def run(self): 
+        #Sometimes the thymio doesn't send any new sensors values and therefore process_event is never called 
+        #we implemented that function to still update the state if needed even if there is no new sensors values
+        #it is useful for the exit condition of the reactive_control 
         while True:
             # DO CHECK
             self.updateWithoutSensors()
@@ -54,11 +56,11 @@ class LocalNavigation(Module):
     def updateWithoutSensors(self):
         dt = time() - self.last_time
 
-        if dt > 7 and self.ctx.state.reactive_control == True and self.computedOnce == False:
+        if dt > 7 and self.ctx.state.reactive_control == True and self.computedOnce == False: #compute the new djikstra with the new position of the thymio
             self.ctx.scene_update.trigger() #update djisktra
             self.computedOnce = True
         
-        if dt > 8 and self.ctx.state.reactive_control:
+        if dt > 8 and self.ctx.state.reactive_control: #exit condition, if 8 sec passed sinced the trigger 
             self.computedOnce = False
             self.ctx.state.reactive_control = False
             self.motion_control.setNewWaypoint(1)
@@ -67,20 +69,20 @@ class LocalNavigation(Module):
 
     def should_freestyle(self):
         distances = np.array(self.ctx.state.relative_distances)
-        distances = distances[:-2]
+        distances = distances[:-2] #remove 2 back sensors 
         distances = distances[distances != -1]
         if (len(distances) > 0 and self.ctx.state.reactive_control == False):
-            if (distances.min() < 3.5):
+            if (distances.min() < 3.5): #entry condition, if the obstacle is very close
                 self.ctx.state.reactive_control = True
                 self.computedOnce = False
                 self.last_time = time()
                 return
 
-    def update(self):
+    def update(self): #updating state variable 
         allDistances = self.getDistanceArray()
         self.ctx.state.relative_distances = allDistances.tolist()
 
-    def updateMap(self):
+    def updateMap(self): #no use in this project but for futur use, it update the map of all new sensed obstacles
         relativeWalls = self.getWallRelative()
         for i in range(len(relativeWalls)):
             if (relativeWalls[i] != None):
@@ -99,14 +101,15 @@ class LocalNavigation(Module):
 
         return R.dot(coords.transpose()).transpose()
 
-    def wayPointPerceivedToReal(self, wayPointPerceived):
+    def wayPointPerceivedToReal(self, wayPointPerceived): #transforms the perceived waypoint to the real world coordinates
         pos = self.ctx.state.position
         coords = np.array([wayPointPerceived[0], wayPointPerceived[1]])
         wayPoint = self.rotate(self.ctx.state.orientation, coords)
         [x, y] = wayPoint+np.array([0, 0])
         return np.array([x, y])
 
-    def getDistance(self, sensorValue, SensorsValuesConversion):
+    def getDistance(self, sensorValue, SensorsValuesConversion): #convert sensors values [0;4500] to real world cm
+        #it takes as arguments the sensor value, and the ref array for the conversion (line 20)
         idx1 = np.abs(SensorsValuesConversion[:, 1] - sensorValue).argmin()
         distance = SensorsValuesConversion[idx1, 1] - sensorValue
         idx2 = idx1+np.sign(distance)
@@ -117,7 +120,7 @@ class LocalNavigation(Module):
             return SensorsValuesConversion[idx1, 0]
         if (distance == 0):
             computedDist = SensorsValuesConversion[idx1, 0]
-        else:
+        else: #if between the values choose linearly the value
             absoluteDiff = np.abs(
                 SensorsValuesConversion[idx2, 1]-SensorsValuesConversion[idx1, 1])
             percentage = (distance/absoluteDiff)
@@ -126,7 +129,7 @@ class LocalNavigation(Module):
             return -1
         return computedDist
 
-    def getDistanceArray(self):
+    def getDistanceArray(self): #array of conversion of all Thymios sensors to real world cm depending on their reference
         proxSensor = np.array(self.ctx.state.prox_sensors)
         proxDistance = []
         proxDistance = proxDistance + \
@@ -145,7 +148,7 @@ class LocalNavigation(Module):
             [self.getDistance(proxSensor[6], SensorsValuesBack)]
         return np.array(proxDistance)
 
-    def getWallRelative(self):
+    def getWallRelative(self): #no use in this project, bur returns the relative wall position  
         distAray = np.array(self.ctx.state.relative_distances)
         obstacle_positions = []
         for i in range(len(distAray)):
