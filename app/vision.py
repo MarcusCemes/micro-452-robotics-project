@@ -29,6 +29,8 @@ LANDMARK_DETECTION_THRESHOLD = 10  # Minimum number of landmarks pixels
 TEST_IMAGE_PATH = "assets/test_frame_01.jpg"  # Test image path
 THRESHOLD = 128  # Colour threshold for binarisation
 WAIT_KEY_INTERVAL_MS = 100  # GUI wait key interval
+ISOLATION_SIZE = 3  # size of isolate kernel
+ISOLATE_THRESHOLD = 3  # number of neighbours required to consider a pixel isolated
 
 PIXEL_MIN = 0  # Minimum pixel value
 PIXEL_MAX = 255  # Maximum pixel value
@@ -262,6 +264,7 @@ class Vision:
                 self._isolate_obstacles,
                 self._generate_obstacle_grid,
                 self._normalise,
+                self._remove_isolated_pixels,
             ],
         )
 
@@ -341,6 +344,26 @@ class Vision:
 
         # Flip the image vertically to match the robot's coordinate system
         return cv2.flip(resized, 0)
+
+    def _remove_isolated_pixels(self, image: Image) -> Image:
+        """Removes isolated pixels from the image."""
+
+        convolution = convolve2d(
+            image,
+            self._isolation_kernel(),
+            mode="same",
+            boundary="fill",
+            fillvalue=0,
+        )
+
+        mask = np.where(convolution > ISOLATE_THRESHOLD, 1, 0)  # type: ignore
+
+        return np.multiply(image, mask)  # type: ignore
+
+    def _isolation_kernel(self, size: int = ISOLATION_SIZE) -> npt.NDArray[np.uint64]:
+        """Generates a kernel for removing isolated pixels."""
+
+        return np.ones((size, size), np.uint64)
 
     def _normalise(self, image: Image, threshold=THRESHOLD) -> Image:
         """Normalises the image to 0 and 1 values, based on a threshold level."""
