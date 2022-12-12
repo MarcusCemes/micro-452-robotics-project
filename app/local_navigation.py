@@ -32,10 +32,10 @@ sensor_pos_from_center = (
 # Each sensor have their own scale eg : [1[cm] <=> 4771 [sensor value]]
 SensorsValuesFront = np.array(
     [
-        [1, 4771],
-        [2, 4684],
-        [3, 4542],
-        [4, 4150],
+        [1, 4500],
+        [2, 4300],
+        [3, 4200],
+        [4, 4100],
         [5, 3720],
         [6, 3383],
         [7, 3100],
@@ -47,10 +47,10 @@ SensorsValuesFront = np.array(
 )
 SensorsValuesDiag = np.array(
     [
-        [1, 4759],
-        [2, 4702],
-        [3, 4600],
-        [4, 4314],
+        [1, 4200],
+        [2, 4200],
+        [3, 4000],
+        [4, 3900],
         [5, 3909],
         [6, 3547],
         [7, 3254],

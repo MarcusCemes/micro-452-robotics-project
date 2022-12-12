@@ -93,8 +93,8 @@ class BigBrain:
 
                 # only update if position is known or live camera is used
                 # otherwise only predict state
-                #if USE_LIVE_CAMERA or self.ctx.state.position == None:
-                    #modules.filtering.update((obs.back[0], obs.back[1], orientation))
+                if USE_LIVE_CAMERA or self.ctx.state.position == None:
+                    modules.filtering.update((obs.back[0], obs.back[1], orientation))
 
                 # save last detected position in state for ui display
                 self.ctx.state.last_detection = back
