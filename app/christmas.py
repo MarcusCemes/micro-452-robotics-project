@@ -4,7 +4,7 @@ from app.config import DROP_SPEED, DROP_TIME, HALF_TURN_SPEED, HALF_TURN_TIME
 from app.context import Context
 from app.utils.console import *
 
-WAIT_TIME = 3
+WAIT_TIME = 1
 
 
 class ChristmasCelebration:

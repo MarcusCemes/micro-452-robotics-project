@@ -105,7 +105,7 @@ class MotionControl(Module):
         vAngle = temp * np.sign(vAngle)
 
         if abs(dDist) < 6:  # if < 6 cm of the waypoint => go to the next waypoint
-            if abs(dDist) < 1:  # if < 1 cm => stop
+            if abs(dDist) < 5:  # if < 1 cm => stop
                 if (
                     self.ctx.state.next_waypoint_index
                     == len(self.ctx.state.path or []) - 1
@@ -126,7 +126,7 @@ class MotionControl(Module):
             arrived = bb[0]
         distances = np.array(self.ctx.state.relative_distances)
         vForward = 30
-        vAngle = -3
+        vAngle = -2
         if distances[0] == -1:  # corners control
             self.times = self.times + 1 * self.factor
             if self.times < 40:
@@ -157,7 +157,6 @@ class MotionControl(Module):
                     vForward = (distances[0] - 4) * 10
         # 1st priority, if senses smt in the front sensor
         if distances[2] != -1 and distances[2] < 5:
-            print("??")
             self.times = 0
             vAngle = -(distances[2] - 5) * 10
             if distances[2] < 4:
